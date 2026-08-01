@@ -50,6 +50,8 @@ const CHARYBDIS_PARTS = new Image();
 CHARYBDIS_PARTS.src = `${import.meta.env.BASE_URL}assets/odyssey/charybdis-parts.png`;
 const CHARYBDIS_PART_Y = 135;
 const CHARYBDIS_PART_H = 500;
+const SCYLLA_SPRITES = new Image();
+SCYLLA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/scylla-grid.png`;
 
 export interface ViewOptions {
   localPlayer: number;
@@ -730,6 +732,8 @@ export class Renderer {
       } else if (e.defId === ENEMY.Charybdis || e.defId === ENEMY.CharybdisBody
         || e.defId === ENEMY.CharybdisTail || e.defId === ENEMY.CharybdisSpawn) {
         this.drawCharybdis(e, x, y - lift + bob, size, spawnFade);
+      } else if (e.defId === ENEMY.BoneDragon || e.defId === ENEMY.ScyllaSpawn) {
+        this.drawScylla(e, x, y - lift + bob, size, spawnFade);
       } else {
         atlas.drawTinted(ctx, d.art, x, y - lift + bob, size, rot, color, spawnFade);
       }
@@ -864,6 +868,30 @@ export class Renderer {
       const part = e.defId === ENEMY.Charybdis ? 0 : e.defId === ENEMY.CharybdisTail ? 2 : 1;
       drawPart(part, 0, size * 1.08, size * 0.82);
     }
+    this.ctx.restore();
+  }
+
+  private drawScylla(e: Enemy, x: number, y: number, size: number, alpha: number): void {
+    if (!SCYLLA_SPRITES.complete || SCYLLA_SPRITES.naturalWidth === 0) return;
+    const attacking = e.blockedBy !== 0;
+    const cycle = Math.floor((this.time + e.id * 67) / 155);
+    const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const sourceW = SCYLLA_SPRITES.naturalWidth / 4;
+    const sourceH = SCYLLA_SPRITES.naturalHeight / 2;
+    const sourceX = (frame % 4) * sourceW;
+    const sourceY = Math.floor(frame / 4) * sourceH;
+    const facesRight = e.dx > 0;
+    const w = size * 1.62;
+    const h = size * 0.92;
+    this.ctx.save();
+    this.ctx.globalAlpha *= alpha;
+    this.ctx.translate(x, y - size * 0.05);
+    this.ctx.scale(facesRight ? -1 : 1, 1);
+    this.ctx.drawImage(
+      SCYLLA_SPRITES,
+      sourceX, sourceY, sourceW, sourceH,
+      -w / 2, -h / 2, w, h,
+    );
     this.ctx.restore();
   }
 
