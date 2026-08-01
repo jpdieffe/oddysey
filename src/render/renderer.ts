@@ -31,6 +31,11 @@ CYCLOPS_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/cyclops-strip.p
 const CYCLOPS_FRAME_W = 256;
 const CYCLOPS_FRAME_Y = 125;
 const CYCLOPS_FRAME_H = 390;
+const MINOTAUR_SPRITES = new Image();
+MINOTAUR_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/minotaur-strip.png`;
+const MINOTAUR_FRAME_W = 256;
+const MINOTAUR_FRAME_Y = 170;
+const MINOTAUR_FRAME_H = 360;
 
 export interface ViewOptions {
   localPlayer: number;
@@ -702,6 +707,8 @@ export class Renderer {
 
       if (e.defId === ENEMY.Infernal || e.defId === ENEMY.YoungCyclops) {
         this.drawCyclops(e, x, y - lift + bob, size, spawnFade);
+      } else if (e.defId === ENEMY.Minotaur || e.defId === ENEMY.MinotaurWarrior) {
+        this.drawMinotaur(e, x, y - lift + bob, size, spawnFade);
       } else {
         atlas.drawTinted(ctx, d.art, x, y - lift + bob, size, rot, color, spawnFade);
       }
@@ -744,6 +751,26 @@ export class Renderer {
       CYCLOPS_SPRITES,
       frame * CYCLOPS_FRAME_W, CYCLOPS_FRAME_Y, CYCLOPS_FRAME_W, CYCLOPS_FRAME_H,
       -w / 2, -h * 0.72, w, h,
+    );
+    this.ctx.restore();
+  }
+
+  private drawMinotaur(e: Enemy, x: number, y: number, size: number, alpha: number): void {
+    if (!MINOTAUR_SPRITES.complete || MINOTAUR_SPRITES.naturalWidth === 0) return;
+    const attacking = e.blockedBy !== 0;
+    const cycle = Math.floor((this.time + e.id * 61) / 135);
+    const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const h = size * 1.28;
+    const w = h * (MINOTAUR_FRAME_W / MINOTAUR_FRAME_H);
+    const facesRight = e.dx > 0;
+    this.ctx.save();
+    this.ctx.globalAlpha *= alpha;
+    this.ctx.translate(x, y + size * 0.06);
+    this.ctx.scale(facesRight ? -1 : 1, 1);
+    this.ctx.drawImage(
+      MINOTAUR_SPRITES,
+      frame * MINOTAUR_FRAME_W, MINOTAUR_FRAME_Y, MINOTAUR_FRAME_W, MINOTAUR_FRAME_H,
+      -w / 2, -h * 0.7, w, h,
     );
     this.ctx.restore();
   }
