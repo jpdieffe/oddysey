@@ -155,15 +155,38 @@ export function generateWave(matchSeed: number, wave: number, laneCount: number,
   if (boss) {
     const bossSlot = Math.min(1, Math.floor(wave / 5) - 1);
     const bossId = BOOK_BOSSES[book][bossSlot];
+    const bossLane = nextInt(rng, laneCount);
     orders.push({
       at: sec(3),
       defId: bossId,
-      lane: nextInt(rng, laneCount),
+      lane: bossLane,
       wave,
       hpPct: hpBase,
       boss: true,
       mod: mod === WaveMod.Swarm ? WaveMod.None : mod,
     });
+    if (bossId === ENEMY.Charybdis) {
+      for (let segment = 0; segment < 4; segment++) {
+        orders.push({
+          at: sec(3) + (segment + 1) * sec(1.05),
+          defId: ENEMY.CharybdisBody,
+          lane: bossLane,
+          wave,
+          hpPct: hpBase,
+          boss: false,
+          mod: mod === WaveMod.Swarm ? WaveMod.None : mod,
+        });
+      }
+      orders.push({
+        at: sec(3) + 5 * sec(1.05),
+        defId: ENEMY.CharybdisTail,
+        lane: bossLane,
+        wave,
+        hpPct: hpBase,
+        boss: false,
+        mod: mod === WaveMod.Swarm ? WaveMod.None : mod,
+      });
+    }
   }
 
   // Stable ordering: the spawner pops from the front, so sort by time then by a

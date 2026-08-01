@@ -230,6 +230,21 @@ export function runChecks(): Report {
   }
   if (ok) lines.push('PASS  each book has unique mythic bosses and unlocks their weaker forms afterward');
 
+  const charybdisOrders = generateWave(123, 5, 2, 2).orders.filter((order) =>
+    order.defId === ENEMY.Charybdis || order.defId === ENEMY.CharybdisBody
+      || order.defId === ENEMY.CharybdisTail,
+  );
+  const charybdisLane = charybdisOrders[0]?.lane;
+  if (charybdisOrders.filter((order) => order.defId === ENEMY.Charybdis).length !== 1
+    || charybdisOrders.filter((order) => order.defId === ENEMY.CharybdisBody).length !== 4
+    || charybdisOrders.filter((order) => order.defId === ENEMY.CharybdisTail).length !== 1
+    || charybdisOrders.some((order) => order.lane !== charybdisLane)) {
+    ok = false;
+    lines.push('FAIL  Charybdis did not spawn as one six-piece worm on a shared lane');
+  } else {
+    lines.push('PASS  Charybdis spawns as six independently killable linked pieces');
+  }
+
   for (const mapId of [0, 1, 2]) {
     const seed = 0x1234abcd ^ (mapId * 7919);
     const a = run(seed, mapId);

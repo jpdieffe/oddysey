@@ -91,6 +91,8 @@ export const ENEMY = {
   HydraSpawn: 20,
   CharybdisSpawn: 21,
   ScyllaSpawn: 22,
+  CharybdisBody: 23,
+  CharybdisTail: 24,
 } as const;
 
 export const ENEMIES: readonly EnemyDef[] = [
@@ -214,11 +216,11 @@ export const ENEMIES: readonly EnemyDef[] = [
   }),
   def({
     id: ENEMY.Charybdis, key: 'charybdis-boss', name: 'Charybdis',
-    hp: 6800, speed: cps(0.5), armor: 20, shield: 1800, shieldRegen: 24,
-    bounty: 420, xp: 180, leak: 9, boss: true, scale: fx(2.3), ccResist: 78,
+    hp: 2600, speed: cps(0.5), armor: 20, shield: 700, shieldRegen: 10,
+    bounty: 180, xp: 70, leak: 5, boss: true, scale: fx(1.8), ccResist: 78,
     art: UNIT.planeGreen, tint: 1,
     ability: EnemyAbility.ShieldAllies, abilityCd: sec(6), abilityPower: 100,
-    desc: 'BOSS — the living whirlpool drags a shielded tide of monsters behind it.',
+    desc: 'BOSS — an abyssal worm whose independently living armored segments must all be slain.',
   }),
   def({
     id: ENEMY.YoungCyclops, key: 'young-cyclops', name: 'Young Cyclops',
@@ -256,6 +258,20 @@ export const ENEMIES: readonly EnemyDef[] = [
     hp: 440, speed: cps(1.05), armor: 7, bounty: 38, xp: 16, leak: 2,
     scale: fx(1.22), art: UNIT.planeGrey, tint: 9,
     desc: 'A smaller sea horror that follows in Scylla’s wake.',
+  }),
+  def({
+    id: ENEMY.CharybdisBody, key: 'charybdis-body', name: 'Charybdis Body',
+    hp: 900, speed: cps(0.5), armor: 17, shield: 220, shieldRegen: 4,
+    bounty: 65, xp: 28, leak: 1, scale: fx(1.55), ccResist: 62,
+    art: UNIT.tankGreen, tint: 1,
+    desc: 'One independently living armored section of Charybdis.',
+  }),
+  def({
+    id: ENEMY.CharybdisTail, key: 'charybdis-tail', name: 'Charybdis Tail',
+    hp: 750, speed: cps(0.5), armor: 15, shield: 180, shieldRegen: 3,
+    bounty: 55, xp: 24, leak: 1, scale: fx(1.45), ccResist: 55,
+    art: UNIT.tankGreen, tint: 1,
+    desc: 'The final bladed tail section of Charybdis.',
   }),
 ];
 

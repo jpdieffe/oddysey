@@ -46,6 +46,10 @@ HYDRA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/hydra-strip.png`;
 const HYDRA_FRAME_W = 256;
 const HYDRA_FRAME_Y = 170;
 const HYDRA_FRAME_H = 370;
+const CHARYBDIS_PARTS = new Image();
+CHARYBDIS_PARTS.src = `${import.meta.env.BASE_URL}assets/odyssey/charybdis-parts.png`;
+const CHARYBDIS_PART_Y = 135;
+const CHARYBDIS_PART_H = 500;
 
 export interface ViewOptions {
   localPlayer: number;
@@ -723,6 +727,9 @@ export class Renderer {
         this.drawChimera(e, x, y - lift + bob, size, spawnFade);
       } else if (e.defId === ENEMY.Hydra || e.defId === ENEMY.HydraSpawn) {
         this.drawHydra(e, x, y - lift + bob, size, spawnFade);
+      } else if (e.defId === ENEMY.Charybdis || e.defId === ENEMY.CharybdisBody
+        || e.defId === ENEMY.CharybdisTail || e.defId === ENEMY.CharybdisSpawn) {
+        this.drawCharybdis(e, x, y - lift + bob, size, spawnFade);
       } else {
         atlas.drawTinted(ctx, d.art, x, y - lift + bob, size, rot, color, spawnFade);
       }
@@ -826,6 +833,37 @@ export class Renderer {
       frame * HYDRA_FRAME_W, HYDRA_FRAME_Y, HYDRA_FRAME_W, HYDRA_FRAME_H,
       -w / 2, -h * 0.7, w, h,
     );
+    this.ctx.restore();
+  }
+
+  private drawCharybdis(e: Enemy, x: number, y: number, size: number, alpha: number): void {
+    if (!CHARYBDIS_PARTS.complete || CHARYBDIS_PARTS.naturalWidth === 0) return;
+    const sourceW = CHARYBDIS_PARTS.naturalWidth / 3;
+    const facesRight = e.dx > 0;
+    const pulse = 1 + Math.sin((this.time + e.id * 41) * 0.006) * 0.035;
+    this.ctx.save();
+    this.ctx.globalAlpha *= alpha;
+    this.ctx.translate(x, y + size * 0.04);
+    this.ctx.scale(facesRight ? -pulse : pulse, pulse);
+
+    const drawPart = (part: number, offsetX: number, width: number, height: number): void => {
+      this.ctx.drawImage(
+        CHARYBDIS_PARTS,
+        part * sourceW, CHARYBDIS_PART_Y, sourceW, CHARYBDIS_PART_H,
+        offsetX - width / 2, -height / 2, width, height,
+      );
+    };
+
+    if (e.defId === ENEMY.CharybdisSpawn) {
+      const moduleW = size * 0.62;
+      const moduleH = size * 0.58;
+      drawPart(0, -moduleW * 0.82, moduleW, moduleH);
+      drawPart(1, 0, moduleW, moduleH);
+      drawPart(2, moduleW * 0.82, moduleW, moduleH);
+    } else {
+      const part = e.defId === ENEMY.Charybdis ? 0 : e.defId === ENEMY.CharybdisTail ? 2 : 1;
+      drawPart(part, 0, size * 1.08, size * 0.82);
+    }
     this.ctx.restore();
   }
 
