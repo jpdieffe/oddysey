@@ -1971,7 +1971,13 @@ function updateHeroes(ctx: Ctx): void {
 
     // Auto attack
     if (h.attackCd > 0) { h.attackCd--; continue; }
-    const target = heroTarget(ctx, h, d.range);
+    const buffTier = p.attackBuffKind > 0 ? ((p.attackBuffKind - 1) % 5) + 1 : 0;
+    const buffHero = p.attackBuffKind > 0 ? Math.floor((p.attackBuffKind - 1) / 5) : -1;
+    // Odysseus's transformed attack is explicitly a bow stance. It needs
+    // ranged acquisition as well as a projectile, not an arrow graphic that
+    // only appears after an enemy has already entered spear range.
+    const attackRange = buffHero === 0 ? fx(3.6 + buffTier * 0.25) : d.range;
+    const target = heroTarget(ctx, h, attackRange);
     if (!target) continue;
 
     fxNormalize(target.x - h.x, target.y - h.y, tmpVec);
@@ -1982,7 +1988,6 @@ function updateHeroes(ctx: Ctx): void {
     h.attackCd = Math.max(1, d.attackCd - pct(d.attackCd, Math.min(70, passive.attackRatePct)));
 
     let damage = d.damage + d.damagePerLevel * (h.level - 1);
-    const buffTier = p.attackBuffKind > 0 ? ((p.attackBuffKind - 1) % 5) + 1 : 0;
     const buffDamagePct = [0, 35, 60, 90, 130, 180][buffTier];
     damage += pct(damage, m.heroDamagePct + passive.damagePct + buffDamagePct);
     const critPct = d.critPct + m.critPct + passive.critPct;
@@ -1991,7 +1996,7 @@ function updateHeroes(ctx: Ctx): void {
     }
 
     const st = heroAttackStats(d, damage, p.attackBuffKind);
-    if (d.projSpeed <= 0) {
+    if (st.projSpeed <= 0) {
       resolveHit(ctx, p.idx, 0, st, target, damage, target.x, target.y);
       emit(ctx, EventKind.Shot, h.x, h.y, -1, st.projKind, p.idx, target.x, target.y);
     } else {
@@ -2019,10 +2024,10 @@ function heroAttackStats(d: ReturnType<typeof heroDef>, damage: number, buffKind
     ...BASE_STATS,
     damage,
     cooldown: d.attackCd,
-    range: d.range,
+    range: buffHero === 0 ? fx(3.6 + buffTier * 0.25) : d.range,
     splash: d.splash,
     dmgType: buffHero === 2 ? DmgType.Fire : buffHero === 3 ? DmgType.Frost : d.dmgType,
-    projSpeed: d.projSpeed,
+    projSpeed: buffHero === 0 ? fx(0.72) : d.projSpeed,
     projKind: empoweredKind,
     pierce: buffTier > 0 ? buffTier - 1 : 0,
     slowPct: buffHero === 3 ? 22 + buffTier * 7 : 0,

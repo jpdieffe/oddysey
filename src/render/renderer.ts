@@ -1009,10 +1009,10 @@ export class Renderer {
         ctx.ellipse(x, y + size * .18, size * (.34 + tier * .035), size * (.15 + tier * .012), 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
-        if (d.projSpeed <= 0 && swing > 0) {
+        if (h.defId === HERO.Orc && swing > 0) {
           const side = h.dx < 0 ? -1 : 1;
           this.drawEmpoweredShot(x + side * size * .34, y - size * .08,
-            size * (.34 + tier * .055), side > 0 ? 0 : Math.PI, tier);
+            size * (.34 + tier * .055), side > 0 ? 0 : Math.PI, tier, h.defId);
         }
       }
 
@@ -1091,7 +1091,7 @@ export class Renderer {
         case ProjKind.Empowered4:
         case ProjKind.Empowered5:
           this.drawEmpoweredShot(x, y, cell * fxToFloat(p.scale), rot,
-            p.kind - ProjKind.Empowered1 + 1);
+            p.kind - ProjKind.Empowered1 + 1, state.players[p.owner]?.hero.defId ?? HERO.Paladin);
           break;
         case ProjKind.Spark:
           this.dot(x, y, cell * 0.13, '#c39cff');
@@ -1177,41 +1177,54 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawEmpoweredShot(x: number, y: number, size: number, rot: number, tier: number): void {
+  private drawEmpoweredShot(x: number, y: number, size: number, rot: number, tier: number, heroId: number): void {
     const ctx = this.ctx;
-    const colors = ['#62f5ff', '#4e9cff', '#9b63ff', '#ff55d7', '#fff19a'];
-    const cores = ['#eaffff', '#d9eeff', '#efe3ff', '#ffe1f8', '#ffffff'];
-    const color = colors[Math.max(0, Math.min(4, tier - 1))];
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot - Math.PI / 2);
-    ctx.shadowColor = color;
-    ctx.shadowBlur = size * (.28 + tier * .08);
-    ctx.lineCap = 'round';
+    const powerColors = ['#67eaff', '#4b9dff', '#a66cff', '#ff57d2', '#fff19a'];
+    const glow = powerColors[Math.max(0, Math.min(4, tier - 1))];
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot - Math.PI / 2);
+    ctx.shadowColor = glow; ctx.shadowBlur = size * (.22 + tier * .075); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-    // Every tier has a different traveling silhouette, not merely a recolor.
-    if (tier === 1) {
-      ctx.strokeStyle = color; ctx.lineWidth = size * .11;
-      ctx.beginPath(); ctx.moveTo(-size * .5, 0); ctx.lineTo(size * .15, 0); ctx.stroke();
-      ctx.fillStyle = cores[0]; ctx.beginPath(); ctx.arc(size * .24, 0, size * .18, 0, Math.PI * 2); ctx.fill();
-    } else if (tier === 2) {
-      ctx.fillStyle = color; ctx.strokeStyle = cores[1]; ctx.lineWidth = size * .045;
-      ctx.beginPath(); ctx.moveTo(size*.5,0); ctx.lineTo(-size*.08,-size*.2); ctx.lineTo(-size*.42,0); ctx.lineTo(-size*.08,size*.2); ctx.closePath(); ctx.fill(); ctx.stroke();
-    } else if (tier === 3) {
-      ctx.strokeStyle = color; ctx.lineWidth = size * .15;
-      ctx.beginPath(); ctx.arc(0, 0, size*.34, -Math.PI*.68, Math.PI*.68); ctx.stroke();
-      ctx.strokeStyle = cores[2]; ctx.lineWidth = size * .045;
-      ctx.beginPath(); ctx.arc(0, 0, size*.34, -Math.PI*.68, Math.PI*.68); ctx.stroke();
-    } else if (tier === 4) {
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.moveTo(size*.58,0); ctx.lineTo(-size*.18,-size*.25); ctx.lineTo(-size*.46,0); ctx.lineTo(-size*.18,size*.25); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = cores[3]; ctx.beginPath(); ctx.ellipse(size*.05,0,size*.3,size*.1,0,0,Math.PI*2); ctx.fill();
-      for (const sy of [-1, 1]) { ctx.strokeStyle=color; ctx.lineWidth=size*.06; ctx.beginPath(); ctx.moveTo(-size*.15,sy*size*.12); ctx.lineTo(-size*.5,sy*size*.34); ctx.stroke(); }
+    if (heroId === HERO.Magician) {
+      // Polyphemus: irregular volcanic boulders with progressively hotter
+      // cracks, more orbiting rubble, and a visibly larger silhouette.
+      ctx.rotate(this.time * .006 * (tier % 2 ? 1 : -1));
+      ctx.fillStyle = tier < 3 ? '#6e5945' : tier < 5 ? '#51404a' : '#2f2935';
+      ctx.strokeStyle = '#1d1820'; ctx.lineWidth = size * .055;
+      ctx.beginPath();
+      for (let i=0;i<12;i++) { const a=i*Math.PI/6; const r=size*(i%3===0?.48:i%2===0?.4:.44); const px=Math.cos(a)*r,py=Math.sin(a)*r; if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = glow; ctx.lineWidth = size * (.025 + tier*.009);
+      for(let i=0;i<tier;i++){const a=(i/tier)*Math.PI*2+.3;ctx.beginPath();ctx.moveTo(Math.cos(a)*size*.08,Math.sin(a)*size*.08);ctx.lineTo(Math.cos(a+.18)*size*.38,Math.sin(a+.18)*size*.38);ctx.stroke();}
+      ctx.fillStyle=glow; for(let i=0;i<tier-1;i++){const a=this.time*.004+i*2.4;ctx.beginPath();ctx.arc(Math.cos(a)*size*.62,Math.sin(a)*size*.45,size*(.035+i*.007),0,Math.PI*2);ctx.fill();}
+    } else if (heroId === HERO.HighElf) {
+      // Atalanta: long moon-arrows, gaining split heads, luminous fletching,
+      // side bolts, and finally an Artemis-style star point.
+      const len=size*(.85+tier*.12); ctx.strokeStyle = tier<3 ? '#e7d4a1' : glow; ctx.lineWidth=size*(.045+tier*.007);
+      ctx.beginPath();ctx.moveTo(-len*.55,0);ctx.lineTo(len*.46,0);ctx.stroke();
+      ctx.fillStyle=glow;ctx.strokeStyle='#f8fbff';ctx.lineWidth=size*.025;ctx.beginPath();ctx.moveTo(len*.58,0);ctx.lineTo(len*.34,-size*(.12+tier*.018));ctx.lineTo(len*.4,0);ctx.lineTo(len*.34,size*(.12+tier*.018));ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle=tier===5?'#fff7b0':'#a9edff';
+      for(const sy of [-1,1]){ctx.beginPath();ctx.moveTo(-len*.5,0);ctx.lineTo(-len*.34,sy*size*.17);ctx.lineTo(-len*.18,sy*size*.05);ctx.closePath();ctx.fill();}
+      if(tier>=3)for(const sy of [-1,1]){ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(-len*.35,sy*size*.16);ctx.lineTo(len*.25,sy*size*.16);ctx.stroke();}ctx.globalAlpha=1;
+    } else if (heroId === HERO.Paladin) {
+      // Odysseus: practical bronze arrows becoming royal, gold-edged siege
+      // arrows—not Atalanta's ethereal split-arrow family.
+      const len=size*(.75+tier*.11);ctx.strokeStyle='#8a512d';ctx.lineWidth=size*.065;ctx.beginPath();ctx.moveTo(-len*.55,0);ctx.lineTo(len*.4,0);ctx.stroke();
+      const bronze=ctx.createLinearGradient(0,-size*.2,0,size*.2);bronze.addColorStop(0,'#fff1a5');bronze.addColorStop(.5,tier<3?'#d48732':glow);bronze.addColorStop(1,'#7d3c22');ctx.fillStyle=bronze;ctx.strokeStyle='#3a241d';ctx.lineWidth=size*.025;
+      ctx.beginPath();ctx.moveTo(len*.6,0);ctx.lineTo(len*.28,-size*(.15+tier*.015));ctx.lineTo(len*.36,0);ctx.lineTo(len*.28,size*(.15+tier*.015));ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle=tier>=4?'#fff0a0':'#315b9a';for(const sy of [-1,1]){ctx.beginPath();ctx.moveTo(-len*.5,0);ctx.lineTo(-len*.3,sy*size*.16);ctx.lineTo(-len*.12,sy*size*.04);ctx.closePath();ctx.fill();}
+      if(tier===5){ctx.strokeStyle=glow;ctx.lineWidth=size*.04;ctx.strokeRect(-len*.05,-size*.16,size*.16,size*.32);}
+    } else if (heroId === HERO.Orc) {
+      // Ajax: no traveling projectile. These broad crescents appear only
+      // during his actual melee swing and grow into overlapping shockwaves.
+      ctx.rotate(Math.PI/2);ctx.strokeStyle=glow;ctx.lineWidth=size*(.13+tier*.035);ctx.globalAlpha=.72;
+      for(let i=0;i<Math.ceil(tier/2);i++){ctx.beginPath();ctx.arc(-i*size*.08,0,size*(.38+i*.14),-Math.PI*.72,Math.PI*.72);ctx.stroke();}
+      ctx.globalAlpha=1;ctx.strokeStyle='#fff';ctx.lineWidth=size*.035;ctx.beginPath();ctx.arc(0,0,size*.42,-Math.PI*.72,Math.PI*.72);ctx.stroke();
     } else {
-      ctx.strokeStyle = color; ctx.lineWidth = size * .065;
-      for (let i=0;i<3;i++) { ctx.save(); ctx.rotate(this.time*.008+i*Math.PI/3); ctx.strokeRect(-size*.32,-size*.32,size*.64,size*.64); ctx.restore(); }
-      ctx.fillStyle = cores[4]; ctx.beginPath();
-      for(let i=0;i<10;i++){const a=i*Math.PI/5,r=i%2?size*.2:size*.48;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();ctx.fill();
+      // Circe: layered transformation sigils and witch-fire bolts.
+      ctx.strokeStyle=glow;ctx.lineWidth=size*.045;
+      for(let ring=0;ring<Math.min(3,tier);ring++){ctx.beginPath();ctx.arc(-size*.08,0,size*(.18+ring*.11),0,Math.PI*2);ctx.stroke();}
+      ctx.fillStyle=tier<3?'#ffd27d':'#fff';ctx.beginPath();ctx.moveTo(size*.56,0);ctx.lineTo(size*.08,-size*.2);ctx.lineTo(-size*.12,0);ctx.lineTo(size*.08,size*.2);ctx.closePath();ctx.fill();
+      if(tier>=4){ctx.fillStyle=glow;for(const sy of [-1,1]){ctx.beginPath();ctx.arc(-size*.38,sy*size*.22,size*.07,0,Math.PI*2);ctx.fill();}}
     }
     ctx.restore();
   }

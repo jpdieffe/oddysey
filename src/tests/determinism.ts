@@ -15,7 +15,7 @@ import { activeSkills, heroSkills, SKILLS } from '../content/skills';
 import { build, toggleReady, upgrade, moveHero, useAbility, type Command } from '../sim/commands';
 import { step } from '../sim/sim';
 import { cloneState, createState, hashState, type MatchConfig } from '../sim/state';
-import { Phase, ProjKind, type GameState, type SimOutput } from '../sim/types';
+import { EventKind, Phase, ProjKind, type GameState, type SimOutput } from '../sim/types';
 
 const TICKS = 4000;
 
@@ -252,6 +252,42 @@ export function runChecks(): Report {
   }
   if (bouldersMove) lines.push('PASS  all five Polyphemus boulder tiers leave the hero and travel toward enemies');
   else { ok = false; lines.push('FAIL  one or more Polyphemus boulder tiers remained frozen on the hero'); }
+
+  // Odysseus changes from a melee spear fighter into a true ranged bow user;
+  // Ajax remains melee and emits a slash event without creating a projectile.
+  let heroWeaponsOk = true;
+  const odysseusAttacks = heroSkills(0).filter((skill) => skill.branch === 'Attack');
+  for (let tier = 1; tier <= 5; tier++) {
+    const learned = odysseusAttacks.slice(0, tier).map((skill) => skill.id);
+    const state = createState({ ...makeConfig(0x0d550 + tier, 0, 1), startLives: 20,
+      players: [{ name: 'Odysseus', heroId: 0, skills: learned }] });
+    state.phase = Phase.Combat;
+    state.spawns.push({ at: state.tick, defId: ENEMY.Skeleton, lane: 0, wave: 1, hpPct: 100, boss: false, mod: 0 });
+    step(state, [], { events: [] });
+    const hero = state.players[0].hero, enemy = state.enemies[0];
+    enemy.x = hero.x + fx(3); enemy.y = hero.y; enemy.px = enemy.x; enemy.py = enemy.y; enemy.spawnT = 0;
+    hero.attackCd = 0;
+    step(state, [useAbility(0, odysseusAttacks[tier - 1].id, hero.x, hero.y)], { events: [] });
+    const arrow = state.projectiles.find((p) => p.kind === ProjKind.Empowered1 + tier - 1);
+    if (!arrow || (arrow.x === hero.x && arrow.y === hero.y)) heroWeaponsOk = false;
+  }
+  {
+    const ajaxAttacks = heroSkills(1).filter((skill) => skill.branch === 'Attack');
+    const state = createState({ ...makeConfig(0xa1a5, 0, 1), startLives: 20,
+      players: [{ name: 'Ajax', heroId: 1, skills: ajaxAttacks.map((skill) => skill.id) }] });
+    state.phase = Phase.Combat;
+    state.spawns.push({ at: state.tick, defId: ENEMY.Skeleton, lane: 0, wave: 1, hpPct: 100, boss: false, mod: 0 });
+    step(state, [], { events: [] });
+    const hero = state.players[0].hero, enemy = state.enemies[0];
+    enemy.x = hero.x + fx(.4); enemy.y = hero.y; enemy.px = enemy.x; enemy.py = enemy.y; enemy.spawnT = 0;
+    hero.attackCd = 0;
+    const output: SimOutput = { events: [] };
+    step(state, [useAbility(0, ajaxAttacks[4].id, hero.x, hero.y)], output);
+    if (state.projectiles.some((p) => p.kind >= ProjKind.Empowered1)
+      || !output.events.some((event) => event.kind === EventKind.Shot && event.b === ProjKind.Empowered5)) heroWeaponsOk = false;
+  }
+  if (heroWeaponsOk) lines.push('PASS  Odysseus fires five ranged arrow tiers while Ajax keeps melee slash attacks');
+  else { ok = false; lines.push('FAIL  Odysseus ranged arrows or Ajax melee slash behavior regressed'); }
 
   const expectedBosses = [
     [ENEMY.Infernal, ENEMY.Minotaur],
