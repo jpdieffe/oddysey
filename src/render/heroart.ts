@@ -20,6 +20,16 @@ ODYSSEUS_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/odysseus-strip
 const ODYSSEUS_FRAME_Y = 155;
 const ODYSSEUS_FRAME_H = 430;
 
+const AJAX_SPRITES = new Image();
+AJAX_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/ajax-strip.png`;
+const AJAX_FRAME_Y = 175;
+const AJAX_FRAME_H = 360;
+
+const POLYPHEMUS_SPRITES = new Image();
+POLYPHEMUS_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/cyclops-strip.png`;
+const POLYPHEMUS_FRAME_Y = 125;
+const POLYPHEMUS_FRAME_H = 390;
+
 export interface HeroArtState {
   /** Facing, in radians (same convention as the atlas sprites). */
   rot: number;
@@ -566,6 +576,37 @@ const PAINTERS: Record<number, (ctx: CanvasRenderingContext2D, s: HeroArtState) 
   [HERO.Magician]: drawMagician,
 };
 
+function drawRasterHero(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  frameY: number,
+  frameH: number,
+  x: number,
+  y: number,
+  size: number,
+  state: HeroArtState,
+  heightScale: number,
+): boolean {
+  if (!image.complete || image.naturalWidth === 0) return false;
+
+  const sourceW = image.naturalWidth / 8;
+  let frame = state.walk > 0 ? Math.floor(state.time / 125) % 5 : 0;
+  if (state.swing > 0) frame = 5 + Math.min(2, Math.floor((1 - state.swing) * 3));
+  const facesRight = Math.sin(state.rot) > 0.08;
+  const bob = state.walk > 0 ? Math.sin(state.time * 0.014) * size * 0.018 : 0;
+  const h = size * heightScale;
+  const w = h * (sourceW / frameH);
+
+  ctx.save();
+  ctx.translate(x, y + bob - size * 0.12);
+  ctx.scale(facesRight ? -1 : 1, 1);
+  ctx.shadowColor = state.cast > 0 ? 'rgba(150,235,255,.8)' : 'rgba(8,12,25,.55)';
+  ctx.shadowBlur = state.cast > 0 ? size * 0.08 : size * 0.03;
+  ctx.drawImage(image, frame * sourceW, frameY, sourceW, frameH, -w / 2, -h / 2, w, h);
+  ctx.restore();
+  return true;
+}
+
 /** Draw hero `defId` centred on (x, y), `size` pixels tall, facing `rot`. */
 export function drawHeroSprite(
   ctx: CanvasRenderingContext2D,
@@ -622,28 +663,9 @@ export function drawHeroSprite(
   ctx.stroke();
   ctx.restore();
 
-  if (defId === HERO.Paladin && ODYSSEUS_SPRITES.complete && ODYSSEUS_SPRITES.naturalWidth > 0) {
-    const sourceW = ODYSSEUS_SPRITES.naturalWidth / 8;
-    let frame = state.walk > 0 ? Math.floor(state.time / 125) % 5 : 0;
-    if (state.swing > 0) frame = 5 + Math.min(2, Math.floor((1 - state.swing) * 3));
-    const facingX = Math.sin(state.rot);
-    const facesRight = facingX > 0.08;
-    const bob = state.walk > 0 ? Math.sin(state.time * 0.014) * size * 0.018 : 0;
-    const h = size * 1.22;
-    const w = h * (sourceW / ODYSSEUS_FRAME_H);
-    ctx.save();
-    ctx.translate(x, y + bob - size * 0.12);
-    ctx.scale(facesRight ? -1 : 1, 1);
-    ctx.shadowColor = state.cast > 0 ? 'rgba(150,235,255,.8)' : 'rgba(8,12,25,.55)';
-    ctx.shadowBlur = state.cast > 0 ? size * 0.08 : size * 0.03;
-    ctx.drawImage(
-      ODYSSEUS_SPRITES,
-      frame * sourceW, ODYSSEUS_FRAME_Y, sourceW, ODYSSEUS_FRAME_H,
-      -w / 2, -h / 2, w, h,
-    );
-    ctx.restore();
-    return;
-  }
+  if (defId === HERO.Paladin && drawRasterHero(ctx, ODYSSEUS_SPRITES, ODYSSEUS_FRAME_Y, ODYSSEUS_FRAME_H, x, y, size, state, 1.22)) return;
+  if (defId === HERO.Orc && drawRasterHero(ctx, AJAX_SPRITES, AJAX_FRAME_Y, AJAX_FRAME_H, x, y, size, state, 1.28)) return;
+  if (defId === HERO.Magician && drawRasterHero(ctx, POLYPHEMUS_SPRITES, POLYPHEMUS_FRAME_Y, POLYPHEMUS_FRAME_H, x, y, size, state, 1.35)) return;
 
   ctx.save();
   ctx.translate(x, y + bob - size * 0.13);
