@@ -1007,7 +1007,7 @@ export class Renderer {
       const bh = Math.max(3, cell * 0.08);
       // The Orc's profile has a tall topknot, shoulder spikes, and raised axe;
       // keep his HUD above the silhouette instead of across his face.
-      const top = y - size * (h.defId === HERO.Orc ? 0.92 : 0.7);
+      const top = y - size * (h.defId === HERO.Magician ? 1.65 : h.defId === HERO.Orc ? 0.92 : 0.7);
       ctx.save();
       ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(x - w / 2 - 1, top - 1, w + 2, bh + 2);
