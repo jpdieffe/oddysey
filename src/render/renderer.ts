@@ -41,6 +41,11 @@ CHIMERA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/chimera-strip.p
 const CHIMERA_FRAME_W = 256;
 const CHIMERA_FRAME_Y = 175;
 const CHIMERA_FRAME_H = 380;
+const HYDRA_SPRITES = new Image();
+HYDRA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/hydra-strip.png`;
+const HYDRA_FRAME_W = 256;
+const HYDRA_FRAME_Y = 170;
+const HYDRA_FRAME_H = 370;
 
 export interface ViewOptions {
   localPlayer: number;
@@ -716,6 +721,8 @@ export class Renderer {
         this.drawMinotaur(e, x, y - lift + bob, size, spawnFade);
       } else if (e.defId === ENEMY.CircesBeast || e.defId === ENEMY.EnchantedBoar) {
         this.drawChimera(e, x, y - lift + bob, size, spawnFade);
+      } else if (e.defId === ENEMY.Hydra || e.defId === ENEMY.HydraSpawn) {
+        this.drawHydra(e, x, y - lift + bob, size, spawnFade);
       } else {
         atlas.drawTinted(ctx, d.art, x, y - lift + bob, size, rot, color, spawnFade);
       }
@@ -798,6 +805,26 @@ export class Renderer {
       CHIMERA_SPRITES,
       frame * CHIMERA_FRAME_W, CHIMERA_FRAME_Y, CHIMERA_FRAME_W, CHIMERA_FRAME_H,
       -w / 2, -h * 0.68, w, h,
+    );
+    this.ctx.restore();
+  }
+
+  private drawHydra(e: Enemy, x: number, y: number, size: number, alpha: number): void {
+    if (!HYDRA_SPRITES.complete || HYDRA_SPRITES.naturalWidth === 0) return;
+    const attacking = e.blockedBy !== 0;
+    const cycle = Math.floor((this.time + e.id * 53) / 140);
+    const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const h = size * 1.3;
+    const w = h * (HYDRA_FRAME_W / HYDRA_FRAME_H);
+    const facesRight = e.dx > 0;
+    this.ctx.save();
+    this.ctx.globalAlpha *= alpha;
+    this.ctx.translate(x, y + size * 0.08);
+    this.ctx.scale(facesRight ? -1 : 1, 1);
+    this.ctx.drawImage(
+      HYDRA_SPRITES,
+      frame * HYDRA_FRAME_W, HYDRA_FRAME_Y, HYDRA_FRAME_W, HYDRA_FRAME_H,
+      -w / 2, -h * 0.7, w, h,
     );
     this.ctx.restore();
   }
