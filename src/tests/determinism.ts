@@ -12,10 +12,10 @@ import { ENEMY } from '../content/enemies';
 import { generateWave, unlockedBossEchoes } from '../content/waves';
 import { TOWERS } from '../content/towers';
 import { activeSkills, heroSkills, SKILLS } from '../content/skills';
-import { build, toggleReady, upgrade, moveHero, type Command } from '../sim/commands';
+import { build, toggleReady, upgrade, moveHero, useAbility, type Command } from '../sim/commands';
 import { step } from '../sim/sim';
 import { cloneState, createState, hashState, type MatchConfig } from '../sim/state';
-import { Phase, type GameState, type SimOutput } from '../sim/types';
+import { Phase, ProjKind, type GameState, type SimOutput } from '../sim/types';
 
 const TICKS = 4000;
 
@@ -228,6 +228,30 @@ export function runChecks(): Report {
   }
   if (skillTreesOk) lines.push('PASS  every hero has three five-tier paths and active upgrades replace lower tiers');
   else { ok = false; lines.push('FAIL  five-tier hero paths or hotbar replacement behavior is invalid'); }
+
+  // Regression: empowered piercing boulders must initialize velocity. Tiers
+  // 2-5 used to sit motionless on Polyphemus because only tier 1 had no pierce.
+  let bouldersMove = true;
+  const cyclopsAttacks = heroSkills(4).filter((skill) => skill.branch === 'Attack');
+  for (let tier = 1; tier <= 5; tier++) {
+    const learned = cyclopsAttacks.slice(0, tier).map((skill) => skill.id);
+    const state = createState({ ...makeConfig(0xc1c10 + tier, 0, 1), startLives: 20,
+      players: [{ name: 'Polyphemus', heroId: 4, skills: learned }] });
+    state.phase = Phase.Combat;
+    state.spawns.push({ at: state.tick, defId: ENEMY.Skeleton, lane: 0, wave: 1, hpPct: 100, boss: false, mod: 0 });
+    step(state, [], { events: [] });
+    const hero = state.players[0].hero;
+    const enemy = state.enemies[0];
+    enemy.x = hero.x + fx(2); enemy.y = hero.y; enemy.px = enemy.x; enemy.py = enemy.y; enemy.spawnT = 0;
+    hero.attackCd = 0;
+    step(state, [useAbility(0, cyclopsAttacks[tier - 1].id, hero.x, hero.y)], { events: [] });
+    const shot = state.projectiles.find((p) => p.kind === ProjKind.Empowered1 + tier - 1);
+    if (!shot || (shot.x === hero.x && shot.y === hero.y) || (tier > 1 && shot.pierce >= tier - 1 && shot.vx === 0 && shot.vy === 0)) {
+      bouldersMove = false;
+    }
+  }
+  if (bouldersMove) lines.push('PASS  all five Polyphemus boulder tiers leave the hero and travel toward enemies');
+  else { ok = false; lines.push('FAIL  one or more Polyphemus boulder tiers remained frozen on the hero'); }
 
   const expectedBosses = [
     [ENEMY.Infernal, ENEMY.Minotaur],

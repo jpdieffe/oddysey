@@ -1626,6 +1626,23 @@ function updateProjectiles(ctx: Ctx): void {
     p.life--;
 
     if (p.pierce > 0) {
+      // Piercing hero shots are born with zero velocity just like homing
+      // projectiles. Aim them before the first movement tick; otherwise any
+      // shot with pierce simply remains frozen at its caster forever.
+      let aimX = p.tx;
+      let aimY = p.ty;
+      if (p.homing && p.targetId !== 0) {
+        const target = findEnemy(s, p.targetId);
+        if (target && !target.dead) { aimX = target.x; aimY = target.y; p.tx = aimX; p.ty = aimY; }
+        else { p.targetId = 0; p.homing = false; }
+      }
+      if ((p.vx === 0 && p.vy === 0) || p.homing) {
+        const aimLen = fxNormalize(aimX - p.x, aimY - p.y, tmpVec);
+        if (aimLen > 0) {
+          p.vx = fxMul(tmpVec.x, p.speed);
+          p.vy = fxMul(tmpVec.y, p.speed);
+        }
+      }
       p.x += p.vx;
       p.y += p.vy;
       const r2 = fxMul(HIT_RADIUS + fx(0.2), HIT_RADIUS + fx(0.2));
@@ -1634,6 +1651,7 @@ function updateProjectiles(ctx: Ctx): void {
         if (fxSegDist2(e.x, e.y, p.px, p.py, p.x, p.y) > r2) continue;
         p.hits.push(e.id);
         detonate(ctx, p, e, e.x, e.y);
+        if (e.id === p.targetId) { p.targetId = 0; p.homing = false; }
         p.pierce--;
         if (p.pierce <= 0) { p.life = 0; break; }
       }
