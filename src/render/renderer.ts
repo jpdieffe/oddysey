@@ -1214,6 +1214,7 @@ export class Renderer {
     } else if (heroId === HERO.Orc) {
       // Ajax: no traveling projectile. These broad crescents appear only
       // during his actual melee swing and grow into overlapping shockwaves.
+      size *= 3;
       ctx.rotate(Math.PI/2);ctx.strokeStyle=glow;ctx.lineWidth=size*(.13+tier*.035);ctx.globalAlpha=.72;
       for(let i=0;i<Math.ceil(tier/2);i++){ctx.beginPath();ctx.arc(-i*size*.08,0,size*(.38+i*.14),-Math.PI*.72,Math.PI*.72);ctx.stroke();}
       ctx.globalAlpha=1;ctx.strokeStyle='#fff';ctx.lineWidth=size*.035;ctx.beginPath();ctx.arc(0,0,size*.42,-Math.PI*.72,Math.PI*.72);ctx.stroke();
