@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repack hero strips into isolated, foot-anchored frames and validate them.
+"""Repack animated sprite strips into isolated, foot-anchored frames and validate them.
 
 Requires Pillow, NumPy, and OpenCV. The operation is lossless: pixels are only
 translated onto a larger transparent atlas; they are never resampled.
@@ -132,28 +132,81 @@ def validate(path: Path, expected_ground: int | None = None) -> None:
         raise RuntimeError(f'{path.name}: expected ground {expected_ground}, got {bottoms[0]}')
 
 
+def normalize_grid(source: Path, destination: Path, columns: int, rows: int) -> None:
+    """Flatten a regular animation grid before applying the strip normalizer."""
+    image = Image.open(source).convert('RGBA')
+    cell_w, cell_h = image.width // columns, image.height // rows
+    raw = Image.new('RGBA', (cell_w * columns * rows, cell_h))
+    for frame in range(columns * rows):
+        column, row = frame % columns, frame // columns
+        box = (column * cell_w, row * cell_h, (column + 1) * cell_w, (row + 1) * cell_h)
+        raw.paste(image.crop(box), (frame * cell_w, 0))
+    temporary = destination.with_suffix('.raw.png')
+    raw.save(temporary)
+    try:
+        normalize(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def validate_grid(path: Path, columns: int, rows: int, min_margin: int = 4,
+                  allow_horizontal_touch: bool = False) -> None:
+    image = Image.open(path).convert('RGBA')
+    alpha = np.asarray(image)[:, :, 3]
+    if image.width % columns or image.height % rows:
+        raise RuntimeError(f'{path.name}: dimensions do not divide into {columns}x{rows}')
+    cell_w, cell_h = image.width // columns, image.height // rows
+    for row in range(rows):
+        for column in range(columns):
+            cell = alpha[row*cell_h:(row+1)*cell_h, column*cell_w:(column+1)*cell_w]
+            ys, xs = np.where(cell > ALPHA_THRESHOLD)
+            if not xs.size:
+                raise RuntimeError(f'{path.name} cell {column},{row}: empty')
+            margins = [int(ys.min()), cell_h-1-int(ys.max())]
+            if not allow_horizontal_touch:
+                margins.extend([int(xs.min()), cell_w-1-int(xs.max())])
+            margin = min(margins)
+            if margin < min_margin:
+                raise RuntimeError(f'{path.name} cell {column},{row}: only {margin}px boundary clearance')
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--source-dir', type=Path)
     parser.add_argument('--output-dir', type=Path)
     parser.add_argument('--check-dir', type=Path)
+    parser.add_argument('--profile', choices=['heroes', 'monsters'], default='heroes')
     args = parser.parse_args()
-    mapping = {
+    hero_mapping = {
         'odysseus-strip.png': 'odysseus-strip.png',
         'ajax-strip.png': 'ajax-strip.png',
         'circe-strip.png': 'circe-strip.png',
         'atalanta-strip.png': 'atalanta-strip.png',
         'cyclops-strip.png': 'polyphemus-strip.png',
     }
+    monster_mapping = {
+        'cyclops-strip.png': 'cyclops-strip.png',
+        'minotaur-strip.png': 'minotaur-strip.png',
+        'chimera-strip.png': 'chimera-strip.png',
+        'hydra-strip.png': 'hydra-strip.png',
+    }
     if args.check_dir:
-        for output_name in mapping.values():
+        for output_name in dict.fromkeys([*hero_mapping.values(), *monster_mapping.values()]):
             validate(args.check_dir / output_name)
             print(f'PASS {output_name}: isolated frames, safe alpha margins, fixed foot line')
+        validate(args.check_dir / 'scylla-strip.png')
+        print('PASS scylla-strip.png: isolated frames, safe alpha margins, fixed foot line')
+        # Charybdis segments intentionally meet at their left/right edges to form one worm.
+        validate_grid(args.check_dir / 'charybdis-parts.png', 3, 1, allow_horizontal_touch=True)
+        print('PASS charybdis-parts.png: 3 isolated body parts with safe alpha margins')
         return
     if not args.source_dir or not args.output_dir:
         parser.error('--source-dir and --output-dir are required unless --check-dir is used')
+    mapping = hero_mapping if args.profile == 'heroes' else monster_mapping
     for source_name, output_name in mapping.items():
         normalize(args.source_dir / source_name, args.output_dir / output_name)
+    if args.profile == 'monsters':
+        normalize_grid(args.source_dir / 'scylla-grid.png', args.output_dir / 'scylla-strip.png', 4, 2)
 
 
 if __name__ == '__main__':

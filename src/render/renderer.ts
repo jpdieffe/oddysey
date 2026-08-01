@@ -28,30 +28,22 @@ export const PLAYER_GLOW = [
 const DMG_COLORS = ['#ffffff', '#ff8a3c', '#7ee8ff', '#c39cff', '#9ff05a', '#ffd447'];
 const CYCLOPS_SPRITES = new Image();
 CYCLOPS_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/cyclops-strip.png`;
-const CYCLOPS_FRAME_W = 256;
-const CYCLOPS_FRAME_Y = 125;
-const CYCLOPS_FRAME_H = 390;
+const CYCLOPS_GROUND = 336 / 368;
 const MINOTAUR_SPRITES = new Image();
 MINOTAUR_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/minotaur-strip.png`;
-const MINOTAUR_FRAME_W = 256;
-const MINOTAUR_FRAME_Y = 170;
-const MINOTAUR_FRAME_H = 360;
+const MINOTAUR_GROUND = 302 / 336;
 const CHIMERA_SPRITES = new Image();
 CHIMERA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/chimera-strip.png`;
-const CHIMERA_FRAME_W = 256;
-const CHIMERA_FRAME_Y = 175;
-const CHIMERA_FRAME_H = 380;
+const CHIMERA_GROUND = 227 / 256;
 const HYDRA_SPRITES = new Image();
 HYDRA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/hydra-strip.png`;
-const HYDRA_FRAME_W = 256;
-const HYDRA_FRAME_Y = 170;
-const HYDRA_FRAME_H = 370;
+const HYDRA_GROUND = 275 / 304;
 const CHARYBDIS_PARTS = new Image();
 CHARYBDIS_PARTS.src = `${import.meta.env.BASE_URL}assets/odyssey/charybdis-parts.png`;
 const CHARYBDIS_PART_Y = 135;
 const CHARYBDIS_PART_H = 500;
 const SCYLLA_SPRITES = new Image();
-SCYLLA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/scylla-grid.png`;
+SCYLLA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/scylla-strip.png`;
 
 export interface ViewOptions {
   localPlayer: number;
@@ -769,8 +761,10 @@ export class Renderer {
     const attacking = e.blockedBy !== 0;
     const cycle = Math.floor((this.time + e.id * 73) / 145);
     const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const sourceW = CYCLOPS_SPRITES.naturalWidth / 8;
+    const sourceH = CYCLOPS_SPRITES.naturalHeight;
     const h = size * 1.35;
-    const w = h * (CYCLOPS_FRAME_W / CYCLOPS_FRAME_H);
+    const w = h * (sourceW / sourceH);
     const facesRight = e.dx > 0;
     this.ctx.save();
     this.ctx.globalAlpha *= alpha;
@@ -778,8 +772,8 @@ export class Renderer {
     this.ctx.scale(facesRight ? -1 : 1, 1);
     this.ctx.drawImage(
       CYCLOPS_SPRITES,
-      frame * CYCLOPS_FRAME_W, CYCLOPS_FRAME_Y, CYCLOPS_FRAME_W, CYCLOPS_FRAME_H,
-      -w / 2, -h * 0.72, w, h,
+      frame * sourceW, 0, sourceW, sourceH,
+      -w / 2, -h * CYCLOPS_GROUND, w, h,
     );
     this.ctx.restore();
   }
@@ -789,8 +783,10 @@ export class Renderer {
     const attacking = e.blockedBy !== 0;
     const cycle = Math.floor((this.time + e.id * 61) / 135);
     const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const sourceW = MINOTAUR_SPRITES.naturalWidth / 8;
+    const sourceH = MINOTAUR_SPRITES.naturalHeight;
     const h = size * 1.28;
-    const w = h * (MINOTAUR_FRAME_W / MINOTAUR_FRAME_H);
+    const w = h * (sourceW / sourceH);
     const facesRight = e.dx > 0;
     this.ctx.save();
     this.ctx.globalAlpha *= alpha;
@@ -798,8 +794,8 @@ export class Renderer {
     this.ctx.scale(facesRight ? -1 : 1, 1);
     this.ctx.drawImage(
       MINOTAUR_SPRITES,
-      frame * MINOTAUR_FRAME_W, MINOTAUR_FRAME_Y, MINOTAUR_FRAME_W, MINOTAUR_FRAME_H,
-      -w / 2, -h * 0.7, w, h,
+      frame * sourceW, 0, sourceW, sourceH,
+      -w / 2, -h * MINOTAUR_GROUND, w, h,
     );
     this.ctx.restore();
   }
@@ -809,8 +805,10 @@ export class Renderer {
     const attacking = e.blockedBy !== 0;
     const cycle = Math.floor((this.time + e.id * 47) / 150);
     const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const sourceW = CHIMERA_SPRITES.naturalWidth / 8;
+    const sourceH = CHIMERA_SPRITES.naturalHeight;
     const h = size * 1.2;
-    const w = h * (CHIMERA_FRAME_W / CHIMERA_FRAME_H);
+    const w = h * (sourceW / sourceH);
     const facesRight = e.dx > 0;
     this.ctx.save();
     this.ctx.globalAlpha *= alpha;
@@ -818,8 +816,8 @@ export class Renderer {
     this.ctx.scale(facesRight ? -1 : 1, 1);
     this.ctx.drawImage(
       CHIMERA_SPRITES,
-      frame * CHIMERA_FRAME_W, CHIMERA_FRAME_Y, CHIMERA_FRAME_W, CHIMERA_FRAME_H,
-      -w / 2, -h * 0.68, w, h,
+      frame * sourceW, 0, sourceW, sourceH,
+      -w / 2, -h * CHIMERA_GROUND, w, h,
     );
     this.ctx.restore();
   }
@@ -829,8 +827,10 @@ export class Renderer {
     const attacking = e.blockedBy !== 0;
     const cycle = Math.floor((this.time + e.id * 53) / 140);
     const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const sourceW = HYDRA_SPRITES.naturalWidth / 8;
+    const sourceH = HYDRA_SPRITES.naturalHeight;
     const h = size * 1.3;
-    const w = h * (HYDRA_FRAME_W / HYDRA_FRAME_H);
+    const w = h * (sourceW / sourceH);
     const facesRight = e.dx > 0;
     this.ctx.save();
     this.ctx.globalAlpha *= alpha;
@@ -838,8 +838,8 @@ export class Renderer {
     this.ctx.scale(facesRight ? -1 : 1, 1);
     this.ctx.drawImage(
       HYDRA_SPRITES,
-      frame * HYDRA_FRAME_W, HYDRA_FRAME_Y, HYDRA_FRAME_W, HYDRA_FRAME_H,
-      -w / 2, -h * 0.7, w, h,
+      frame * sourceW, 0, sourceW, sourceH,
+      -w / 2, -h * HYDRA_GROUND, w, h,
     );
     this.ctx.restore();
   }
@@ -880,10 +880,8 @@ export class Renderer {
     const attacking = e.blockedBy !== 0;
     const cycle = Math.floor((this.time + e.id * 67) / 155);
     const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
-    const sourceW = SCYLLA_SPRITES.naturalWidth / 4;
-    const sourceH = SCYLLA_SPRITES.naturalHeight / 2;
-    const sourceX = (frame % 4) * sourceW;
-    const sourceY = Math.floor(frame / 4) * sourceH;
+    const sourceW = SCYLLA_SPRITES.naturalWidth / 8;
+    const sourceH = SCYLLA_SPRITES.naturalHeight;
     const facesRight = e.dx > 0;
     const w = size * 1.62;
     const h = size * 0.92;
@@ -893,7 +891,7 @@ export class Renderer {
     this.ctx.scale(facesRight ? -1 : 1, 1);
     this.ctx.drawImage(
       SCYLLA_SPRITES,
-      sourceX, sourceY, sourceW, sourceH,
+      frame * sourceW, 0, sourceW, sourceH,
       -w / 2, -h / 2, w, h,
     );
     this.ctx.restore();
