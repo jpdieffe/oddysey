@@ -663,7 +663,11 @@ export class Renderer {
       ctx.fill();
       ctx.restore();
 
-      if (t.temp === -2 || t.invested < 0) this.drawCompanion(ctx, t.defId, x, y, size, sd.dx < 0, color, sd.anim);
+      if (t.temp === -2 || t.invested < 0) {
+        const summonTier = t.invested <= -20 ? -t.invested - 20 : 0;
+        const artId = summonTier > 0 ? (state.players[t.owner]?.hero.defId ?? 0) : t.defId;
+        this.drawCompanion(ctx, artId, x, y, size, sd.dx < 0, color, sd.anim, summonTier);
+      }
       else atlas.drawTinted(ctx, stats.unitArt, x, y, size, rot, color, sd.spawnT > 0 ? 0.5 : 1);
 
       if (sd.hp < sd.maxHp) {
@@ -992,13 +996,23 @@ export class Renderer {
         cast: h.abilityT > 0 ? 1 : 0,
       });
       if (p.attackBuffT > 0) {
-        const side = h.dx < 0 ? -1 : 1;
-        if (p.attackBuffKind === 1) {
-          atlas.draw(ctx, FXART.flameBig, x + side * size * .34, y - size * .08, size * .48, side > 0 ? .5 : -.5, .9);
-        } else if (p.attackBuffKind === 2) {
-          this.drawGiantAxe(x + side * size * .34, y - size * .04, size * .62, side * (.6 + swing * 1.8));
-        } else if (p.attackBuffKind === 3) {
-          this.drawSwordWave(x + side * size * .32, y - size * .08, size * .58, side > 0 ? Math.PI / 2 : -Math.PI / 2);
+        const tier = ((p.attackBuffKind - 1) % 5) + 1;
+        const colors = ['#62f5ff', '#4e9cff', '#9b63ff', '#ff55d7', '#fff19a'];
+        const glow = colors[tier - 1];
+        ctx.save();
+        ctx.globalAlpha = .22 + tier * .045;
+        ctx.strokeStyle = glow;
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = size * (.12 + tier * .045);
+        ctx.lineWidth = Math.max(2, size * (.025 + tier * .006));
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * .18, size * (.34 + tier * .035), size * (.15 + tier * .012), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        if (d.projSpeed <= 0 && swing > 0) {
+          const side = h.dx < 0 ? -1 : 1;
+          this.drawEmpoweredShot(x + side * size * .34, y - size * .08,
+            size * (.34 + tier * .055), side > 0 ? 0 : Math.PI, tier);
         }
       }
 
@@ -1071,6 +1085,14 @@ export class Renderer {
         case ProjKind.SwordWave:
           this.drawSwordWave(x, y, cell * fxToFloat(p.scale), rot);
           break;
+        case ProjKind.Empowered1:
+        case ProjKind.Empowered2:
+        case ProjKind.Empowered3:
+        case ProjKind.Empowered4:
+        case ProjKind.Empowered5:
+          this.drawEmpoweredShot(x, y, cell * fxToFloat(p.scale), rot,
+            p.kind - ProjKind.Empowered1 + 1);
+          break;
         case ProjKind.Spark:
           this.dot(x, y, cell * 0.13, '#c39cff');
           break;
@@ -1094,9 +1116,49 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawCompanion(ctx: CanvasRenderingContext2D, defId: number, x: number, y: number, size: number, left: boolean, team: string, anim: number): void {
+  private drawCompanion(ctx: CanvasRenderingContext2D, defId: number, x: number, y: number, size: number, left: boolean, team: string, anim: number, tier = 0): void {
     ctx.save(); ctx.translate(x, y); ctx.scale(left ? -1 : 1, 1);
     const bob = Math.sin(anim * .22) * size * .025; ctx.translate(0, bob);
+    if (tier > 0) {
+      const palettes = [
+        ['#426f9f','#e7b95f'], ['#8c552f','#d9a657'], ['#713d79','#e26390'],
+        ['#3f7f55','#d9c66b'], ['#795f43','#d9bd68'],
+      ];
+      const palette = palettes[defId] ?? palettes[0];
+      size *= 1 + (tier - 1) * .12;
+      ctx.strokeStyle='#201923'; ctx.lineWidth=Math.max(1.5,size*.045); ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.fillStyle=palette[0];
+      if (tier === 1) {
+        // Small horned quadruped: Cave Ram / hound / boar tier.
+        ctx.beginPath();ctx.ellipse(0,0,size*.34,size*.21,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.arc(size*.29,-size*.14,size*.18,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.strokeStyle=palette[1];ctx.lineWidth=size*.075;
+        for(const sy of [-1,1]){ctx.beginPath();ctx.arc(size*.3,-size*.19+sy*size*.04,size*.16,Math.PI*.85,Math.PI*1.85);ctx.stroke();}
+        ctx.strokeStyle='#201923';for(const lx of [-.22,.1]){ctx.beginPath();ctx.moveTo(size*lx,size*.13);ctx.lineTo(size*(lx-.03),size*.36);ctx.stroke();}
+      } else if (tier === 2 || tier === 5) {
+        // Upright warrior; Polyphemus's tier 2 reads unmistakably as a young Cyclops.
+        const giant=tier===5; ctx.beginPath();ctx.ellipse(0,0,size*(giant?.3:.24),size*(giant?.38:.32),0,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.arc(0,-size*.38,size*(giant?.2:.17),0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle='#fff6b0';ctx.beginPath();
+        if(defId===HERO.Magician){ctx.arc(size*.04,-size*.4,size*.045,0,Math.PI*2);}else{ctx.arc(-size*.06,-size*.4,size*.035,0,Math.PI*2);ctx.arc(size*.07,-size*.4,size*.035,0,Math.PI*2);}ctx.fill();
+        ctx.strokeStyle=palette[1];ctx.lineWidth=size*.09;ctx.beginPath();ctx.moveTo(-size*.2,-size*.06);ctx.lineTo(-size*.42,size*.26);ctx.moveTo(size*.2,-size*.06);ctx.lineTo(size*.43,size*.22);ctx.stroke();
+        if(giant){ctx.strokeStyle='#fff4a8';ctx.shadowColor='#fff4a8';ctx.shadowBlur=size*.18;ctx.beginPath();ctx.arc(0,0,size*.48,0,Math.PI*2);ctx.stroke();}
+      } else if (tier === 3) {
+        // Large maned guardian beast.
+        ctx.beginPath();ctx.ellipse(-size*.05,0,size*.37,size*.25,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle=palette[1];ctx.beginPath();ctx.arc(size*.28,-size*.12,size*.27,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle=palette[0];ctx.beginPath();ctx.arc(size*.34,-size*.13,size*.16,0,Math.PI*2);ctx.fill();ctx.stroke();
+      } else {
+        // Tier 4 winged guardian.
+        ctx.beginPath();ctx.ellipse(0,size*.03,size*.3,size*.2,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle=palette[1];
+        for(const sy of [-1,1]){ctx.beginPath();ctx.moveTo(-size*.08,0);ctx.quadraticCurveTo(-size*.42,sy*size*.48,-size*.58,sy*size*.16);ctx.quadraticCurveTo(-size*.3,sy*size*.12,-size*.02,sy*size*.07);ctx.closePath();ctx.fill();ctx.stroke();}
+        ctx.fillStyle=palette[0];ctx.beginPath();ctx.arc(size*.27,-size*.1,size*.17,0,Math.PI*2);ctx.fill();ctx.stroke();
+      }
+      ctx.fillStyle='#ffe76b';ctx.beginPath();ctx.arc(size*.35,-size*.17,size*.035,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=team;ctx.lineWidth=size*.035;ctx.beginPath();ctx.arc(0,0,size*.42,.1,Math.PI-.1);ctx.stroke();
+      ctx.restore(); return;
+    }
     const beast = defId === 9;
     ctx.strokeStyle = '#211923'; ctx.lineWidth = Math.max(1.5, size * .045); ctx.lineJoin = 'round';
     ctx.fillStyle = beast ? '#6f5842' : '#6d8a48';
@@ -1112,6 +1174,45 @@ export class Renderer {
     }
     ctx.fillStyle='#ffe76b'; ctx.beginPath(); ctx.arc(size*.38,-size*.17,size*.035,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle=team; ctx.lineWidth=size*.035; ctx.beginPath(); ctx.arc(0,0,size*.38,.1,Math.PI-.1); ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawEmpoweredShot(x: number, y: number, size: number, rot: number, tier: number): void {
+    const ctx = this.ctx;
+    const colors = ['#62f5ff', '#4e9cff', '#9b63ff', '#ff55d7', '#fff19a'];
+    const cores = ['#eaffff', '#d9eeff', '#efe3ff', '#ffe1f8', '#ffffff'];
+    const color = colors[Math.max(0, Math.min(4, tier - 1))];
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot - Math.PI / 2);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = size * (.28 + tier * .08);
+    ctx.lineCap = 'round';
+
+    // Every tier has a different traveling silhouette, not merely a recolor.
+    if (tier === 1) {
+      ctx.strokeStyle = color; ctx.lineWidth = size * .11;
+      ctx.beginPath(); ctx.moveTo(-size * .5, 0); ctx.lineTo(size * .15, 0); ctx.stroke();
+      ctx.fillStyle = cores[0]; ctx.beginPath(); ctx.arc(size * .24, 0, size * .18, 0, Math.PI * 2); ctx.fill();
+    } else if (tier === 2) {
+      ctx.fillStyle = color; ctx.strokeStyle = cores[1]; ctx.lineWidth = size * .045;
+      ctx.beginPath(); ctx.moveTo(size*.5,0); ctx.lineTo(-size*.08,-size*.2); ctx.lineTo(-size*.42,0); ctx.lineTo(-size*.08,size*.2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if (tier === 3) {
+      ctx.strokeStyle = color; ctx.lineWidth = size * .15;
+      ctx.beginPath(); ctx.arc(0, 0, size*.34, -Math.PI*.68, Math.PI*.68); ctx.stroke();
+      ctx.strokeStyle = cores[2]; ctx.lineWidth = size * .045;
+      ctx.beginPath(); ctx.arc(0, 0, size*.34, -Math.PI*.68, Math.PI*.68); ctx.stroke();
+    } else if (tier === 4) {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.moveTo(size*.58,0); ctx.lineTo(-size*.18,-size*.25); ctx.lineTo(-size*.46,0); ctx.lineTo(-size*.18,size*.25); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = cores[3]; ctx.beginPath(); ctx.ellipse(size*.05,0,size*.3,size*.1,0,0,Math.PI*2); ctx.fill();
+      for (const sy of [-1, 1]) { ctx.strokeStyle=color; ctx.lineWidth=size*.06; ctx.beginPath(); ctx.moveTo(-size*.15,sy*size*.12); ctx.lineTo(-size*.5,sy*size*.34); ctx.stroke(); }
+    } else {
+      ctx.strokeStyle = color; ctx.lineWidth = size * .065;
+      for (let i=0;i<3;i++) { ctx.save(); ctx.rotate(this.time*.008+i*Math.PI/3); ctx.strokeRect(-size*.32,-size*.32,size*.64,size*.64); ctx.restore(); }
+      ctx.fillStyle = cores[4]; ctx.beginPath();
+      for(let i=0;i<10;i++){const a=i*Math.PI/5,r=i%2?size*.2:size*.48;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();ctx.fill();
+    }
     ctx.restore();
   }
 

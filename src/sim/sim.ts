@@ -337,7 +337,9 @@ function cmdAbility(ctx: Ctx, p: PlayerState, skillId: number, x: Fx, y: Fx): vo
     spawnWeaponProjectile(ctx, p.idx, h.x, h.y, sx, sy, ab.radius, dmg, ProjKind.GiantAxe);
     emit(ctx, EventKind.Shot, h.x, h.y, -3, ProjKind.GiantAxe, p.idx, sx, sy);
   } else if (effect === 'flameAttacks' || effect === 'axeAttacks' || effect === 'frostAttacks' || effect === 'swordAttacks') {
-    p.attackBuffKind = effect === 'flameAttacks' ? 1 : effect === 'axeAttacks' ? 2 : effect === 'frostAttacks' ? 3 : 4;
+    // Encodes both hero identity and tier: 1..5 Odysseus, 6..10 Ajax, etc.
+    // This drives gameplay scaling and a genuinely different projectile per tier.
+    p.attackBuffKind = h.defId * 5 + (learned?.tier ?? 1);
     p.attackBuffT = ab.duration ?? sec(12);
     emit(ctx, EventKind.HeroAbility, h.x, h.y, AbilityKind.ShieldSlam, fx(1.2), p.idx);
   } else if (effect === 'bear' || effect === 'ogre') {
@@ -356,7 +358,7 @@ function cmdAbility(ctx: Ctx, p: PlayerState, skillId: number, x: Fx, y: Fx): vo
   } else if (effect === 'guardian') {
     const summonDefs = [TOWER.Barracks, TOWER.Barracks, TOWER.Kennel, TOWER.Kennel, TOWER.Barracks] as const;
     const summonDef = summonDefs[h.defId] ?? TOWER.Barracks;
-    spawnSentry(ctx, p.idx, h.x, h.y, ab.duration ?? sec(20), summonDef, 2);
+    spawnSentry(ctx, p.idx, h.x, h.y, ab.duration ?? sec(20), summonDef, 20 + (learned?.tier ?? 1));
     emit(ctx, EventKind.SoldierSpawn, h.x, h.y, summonDef, 0, p.idx);
   } else switch (baseAb.kind) {
     case AbilityKind.ShieldSlam: {
@@ -1118,6 +1120,14 @@ function effStats(ctx: Ctx, t: Tower, index: number): TowerStats {
   st.critPct += m.critPct + (ctx.auraCrit[index] ?? 0);
   if (st.chains > 0) st.chains += m.chainBonus;
   if (st.executePct > 0) st.executePct += m.executeBonus;
+  if (t.invested <= -20) {
+    const tier = Math.max(1, Math.min(5, -t.invested - 20));
+    st.unitHp += pct(st.unitHp, (tier - 1) * 40);
+    st.unitDamage += pct(st.unitDamage, (tier - 1) * 55);
+    st.unitArmor += (tier - 1) * 2;
+    st.unitCooldown = Math.max(1, st.unitCooldown - pct(st.unitCooldown, (tier - 1) * 10));
+    st.unitScale += fx((tier - 1) * 0.08);
+  }
   return st;
 }
 
@@ -1131,7 +1141,7 @@ function updateTowers(ctx: Ctx): void {
       t.temp--;
       if (t.temp === 0) continue;
     }
-    if (t.invested === -2) {
+    if (t.invested <= -20) {
       const hero = s.players[t.owner]?.hero;
       if (hero?.alive) { t.rx = hero.x; t.ry = hero.y; }
     }
@@ -1309,7 +1319,7 @@ function makeProjectile(
     life: sec(4),
     homing: true,
     arcing: st.arcing,
-    pierce: 0,
+    pierce: st.pierce,
     hits: [],
     slowPct: st.slowPct,
     slowT: st.slowT,
@@ -1324,7 +1334,9 @@ function makeProjectile(
     groundKind: st.groundKind,
     groundRadius: st.groundRadius,
     groundLife: st.groundLife,
-    scale: FX_ONE,
+    scale: st.projKind >= ProjKind.Empowered1 && st.projKind <= ProjKind.Empowered5
+      ? [fx(1.25), fx(1.6), fx(2), fx(2.45), fx(3)][st.projKind - ProjKind.Empowered1]
+      : FX_ONE,
   };
 }
 
@@ -1456,7 +1468,7 @@ function maintainSquad(ctx: Ctx, t: Tower, st: TowerStats): void {
   // Power-summoned creature packs are finite: create the initial pack once,
   // then let injuries and deaths remain meaningful.
   const finitePack = t.temp === -2 || t.invested < 0;
-  const unitCap = t.invested === -2 ? 1 : st.unitCount;
+  const unitCap = t.temp === -2 || t.invested <= -20 ? 1 : st.unitCount;
   if (finitePack && t.charge >= unitCap) return;
   const alive = squadSize(s, t.id);
   if (alive >= unitCap) return;
@@ -1952,7 +1964,9 @@ function updateHeroes(ctx: Ctx): void {
     h.attackCd = Math.max(1, d.attackCd - pct(d.attackCd, Math.min(70, passive.attackRatePct)));
 
     let damage = d.damage + d.damagePerLevel * (h.level - 1);
-    damage += pct(damage, m.heroDamagePct + passive.damagePct + (p.attackBuffKind > 0 ? 35 : 0));
+    const buffTier = p.attackBuffKind > 0 ? ((p.attackBuffKind - 1) % 5) + 1 : 0;
+    const buffDamagePct = [0, 35, 60, 90, 130, 180][buffTier];
+    damage += pct(damage, m.heroDamagePct + passive.damagePct + buffDamagePct);
     const critPct = d.critPct + m.critPct + passive.critPct;
     if (critPct > 0 && chance(s as RngHolder, Math.min(100, critPct))) {
       damage = Math.floor((damage * d.critMult) / 100);
@@ -1980,22 +1994,26 @@ function updateHeroes(ctx: Ctx): void {
 }
 
 function heroAttackStats(d: ReturnType<typeof heroDef>, damage: number, buffKind = 0): TowerStats {
+  const buffTier = buffKind > 0 ? ((buffKind - 1) % 5) + 1 : 0;
+  const buffHero = buffKind > 0 ? Math.floor((buffKind - 1) / 5) : -1;
+  const empoweredKind = buffTier > 0 ? ProjKind.Empowered1 + buffTier - 1 : d.projKind;
   return {
     ...BASE_STATS,
     damage,
     cooldown: d.attackCd,
     range: d.range,
     splash: d.splash,
-    dmgType: buffKind === 1 ? DmgType.Fire : buffKind === 3 ? DmgType.Frost : d.dmgType,
+    dmgType: buffHero === 2 ? DmgType.Fire : buffHero === 3 ? DmgType.Frost : d.dmgType,
     projSpeed: d.projSpeed,
-    projKind: buffKind === 1 ? ProjKind.Ember : buffKind === 2 ? ProjKind.GiantAxe : buffKind === 3 ? ProjKind.Shard : buffKind === 4 ? ProjKind.SwordWave : d.projKind,
-    slowPct: buffKind === 3 ? 38 : 0,
-    slowT: buffKind === 3 ? sec(1.5) : 0,
-    burnDps: buffKind === 1 ? Math.max(8, Math.floor(damage / 4)) : d.burnDps,
-    burnT: buffKind === 1 ? sec(2) : d.burnT,
+    projKind: empoweredKind,
+    pierce: buffTier > 0 ? buffTier - 1 : 0,
+    slowPct: buffHero === 3 ? 22 + buffTier * 7 : 0,
+    slowT: buffHero === 3 ? sec(1 + buffTier * 0.25) : 0,
+    burnDps: buffHero === 2 ? Math.max(8, Math.floor(damage * (15 + buffTier * 5) / 100)) : d.burnDps,
+    burnT: buffHero === 2 ? sec(2 + buffTier * 0.3) : d.burnT,
     poisonDps: d.poisonDps,
     poisonT: d.poisonT,
-    armorShred: buffKind === 4 ? Math.max(8, d.armorShred) : d.armorShred,
+    armorShred: buffHero === 0 ? Math.max(buffTier * 4, d.armorShred) : d.armorShred,
     critMult: d.critMult,
   };
 }

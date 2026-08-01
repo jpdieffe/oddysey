@@ -11,6 +11,7 @@ import { isBuildable, buildMapRuntime } from '../content/maps';
 import { ENEMY } from '../content/enemies';
 import { generateWave, unlockedBossEchoes } from '../content/waves';
 import { TOWERS } from '../content/towers';
+import { activeSkills, heroSkills, SKILLS } from '../content/skills';
 import { build, toggleReady, upgrade, moveHero, type Command } from '../sim/commands';
 import { step } from '../sim/sim';
 import { cloneState, createState, hashState, type MatchConfig } from '../sim/state';
@@ -204,6 +205,29 @@ export function runChecks(): Report {
   } else {
     lines.push('PASS  fixed-point multiply/divide/sqrt are exact (220k random cases)');
   }
+
+  // Each hero owns three five-node paths. Learned active tiers are upgrades:
+  // only the highest summon and attack transformation belong on the hotbar.
+  let skillTreesOk = SKILLS.length === 75;
+  for (let heroId = 0; heroId < 5; heroId++) {
+    const tree = heroSkills(heroId);
+    skillTreesOk = skillTreesOk && tree.length === 15;
+    for (const branch of ['Passive', 'Summon', 'Attack'] as const) {
+      const path = tree.filter((skill) => skill.branch === branch);
+      skillTreesOk = skillTreesOk && path.length === 5
+        && path.every((skill, index) => skill.tier === index + 1
+          && skill.requires === (index === 0 ? -1 : path[index - 1].id));
+    }
+    const summonPath = tree.filter((skill) => skill.branch === 'Summon');
+    const attackPath = tree.filter((skill) => skill.branch === 'Attack');
+    const learned = [...summonPath.slice(0, 4), ...attackPath].map((skill) => skill.id);
+    const bar = activeSkills(learned);
+    skillTreesOk = skillTreesOk && bar.length === 2
+      && bar.some((skill) => skill.branch === 'Summon' && skill.tier === 4)
+      && bar.some((skill) => skill.branch === 'Attack' && skill.tier === 5);
+  }
+  if (skillTreesOk) lines.push('PASS  every hero has three five-tier paths and active upgrades replace lower tiers');
+  else { ok = false; lines.push('FAIL  five-tier hero paths or hotbar replacement behavior is invalid'); }
 
   const expectedBosses = [
     [ENEMY.Infernal, ENEMY.Minotaur],

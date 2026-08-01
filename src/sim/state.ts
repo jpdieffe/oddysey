@@ -3,7 +3,7 @@ import { buildMapRuntime, cellCenter } from '../content/maps';
 import { heroDef } from '../content/heroes';
 import { generateShop } from '../content/waves';
 import { itemDef, MAX_ITEM_SLOTS } from '../content/items';
-import { heroSkills, SKILLS } from '../content/skills';
+import { heroSkills, SKILL_SLOT_COUNT } from '../content/skills';
 import { sec, type GameState, type Hero, type PlayerState, Phase } from './types';
 
 export interface MatchPlayerConfig {
@@ -87,7 +87,7 @@ export function createState(cfg: MatchConfig): GameState {
       relics: [],
       items: [],
       skills,
-      powerCooldowns: new Array(SKILLS.length).fill(0),
+      powerCooldowns: new Array(SKILL_SLOT_COUNT).fill(0),
       attackBuffKind: 0,
       attackBuffT: 0,
       // Refund incompatible nodes from campaigns saved before skills became
@@ -151,7 +151,7 @@ export function addPlayerToState(state: GameState, player: MatchPlayerConfig): P
     idx,
     gold: 280,
     hero: makeHero(player.heroId, spawnX, spawnY),
-    relics: [], items: [], skills: [], powerCooldowns: new Array(SKILLS.length).fill(0), attackBuffKind: 0, attackBuffT: 0, skillPoints: 0, ready: false,
+    relics: [], items: [], skills: [], powerCooldowns: new Array(SKILL_SLOT_COUNT).fill(0), attackBuffKind: 0, attackBuffT: 0, skillPoints: 0, ready: false,
     kills: 0, damage: 0, goldEarned: 0, towersBuilt: 0,
   };
   state.players.push(joined);

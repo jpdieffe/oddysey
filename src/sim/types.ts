@@ -46,6 +46,11 @@ export const ProjKind = {
   Meteor: 9,
   GiantAxe: 10,
   SwordWave: 11,
+  Empowered1: 12,
+  Empowered2: 13,
+  Empowered3: 14,
+  Empowered4: 15,
+  Empowered5: 16,
 } as const;
 export type ProjKind = (typeof ProjKind)[keyof typeof ProjKind];
 
