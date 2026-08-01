@@ -15,6 +15,11 @@
 
 import { HERO } from '../content/heroes';
 
+const ODYSSEUS_SPRITES = new Image();
+ODYSSEUS_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/odysseus-strip.png`;
+const ODYSSEUS_FRAME_Y = 155;
+const ODYSSEUS_FRAME_H = 430;
+
 export interface HeroArtState {
   /** Facing, in radians (same convention as the atlas sprites). */
   rot: number;
@@ -616,6 +621,29 @@ export function drawHeroSprite(
   ctx.ellipse(0, size * 0.3, size * 0.43, size * 0.2, -0.08, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
+
+  if (defId === HERO.Paladin && ODYSSEUS_SPRITES.complete && ODYSSEUS_SPRITES.naturalWidth > 0) {
+    const sourceW = ODYSSEUS_SPRITES.naturalWidth / 8;
+    let frame = state.walk > 0 ? Math.floor(state.time / 125) % 5 : 0;
+    if (state.swing > 0) frame = 5 + Math.min(2, Math.floor((1 - state.swing) * 3));
+    const facingX = Math.sin(state.rot);
+    const facesRight = facingX > 0.08;
+    const bob = state.walk > 0 ? Math.sin(state.time * 0.014) * size * 0.018 : 0;
+    const h = size * 1.22;
+    const w = h * (sourceW / ODYSSEUS_FRAME_H);
+    ctx.save();
+    ctx.translate(x, y + bob - size * 0.12);
+    ctx.scale(facesRight ? -1 : 1, 1);
+    ctx.shadowColor = state.cast > 0 ? 'rgba(150,235,255,.8)' : 'rgba(8,12,25,.55)';
+    ctx.shadowBlur = state.cast > 0 ? size * 0.08 : size * 0.03;
+    ctx.drawImage(
+      ODYSSEUS_SPRITES,
+      frame * sourceW, ODYSSEUS_FRAME_Y, sourceW, ODYSSEUS_FRAME_H,
+      -w / 2, -h / 2, w, h,
+    );
+    ctx.restore();
+    return;
+  }
 
   ctx.save();
   ctx.translate(x, y + bob - size * 0.13);
