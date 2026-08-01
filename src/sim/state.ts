@@ -3,7 +3,7 @@ import { buildMapRuntime, cellCenter } from '../content/maps';
 import { heroDef } from '../content/heroes';
 import { generateShop } from '../content/waves';
 import { itemDef, MAX_ITEM_SLOTS } from '../content/items';
-import { SKILLS } from '../content/skills';
+import { heroSkills, SKILLS } from '../content/skills';
 import { sec, type GameState, type Hero, type PlayerState, Phase } from './types';
 
 export interface MatchPlayerConfig {
@@ -77,17 +77,22 @@ export function createState(cfg: MatchConfig): GameState {
     const baseMaxHp = hd.hp + hd.hpPerLevel * (hero.level - 1);
     hero.maxHp = baseMaxHp;
     hero.hp = hero.maxHp;
+    const savedSkills = [...(p.skills ?? [])];
+    const validSkillIds = new Set(heroSkills(p.heroId).map((skill) => skill.id));
+    const skills = savedSkills.filter((id) => validSkillIds.has(id));
     return {
       idx: i,
       gold: cfg.startGold,
       hero,
       relics: [],
       items: [],
-      skills: [...(p.skills ?? [])],
+      skills,
       powerCooldowns: new Array(SKILLS.length).fill(0),
       attackBuffKind: 0,
       attackBuffT: 0,
-      skillPoints: Math.max(0, p.skillPoints ?? 0),
+      // Refund incompatible nodes from campaigns saved before skills became
+      // hero-specific, so a player never loses a level-up choice.
+      skillPoints: Math.max(0, p.skillPoints ?? 0) + savedSkills.length - skills.length,
       ready: false,
       kills: 0,
       damage: 0,

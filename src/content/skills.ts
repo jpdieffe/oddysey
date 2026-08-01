@@ -1,7 +1,15 @@
 import { fx, type Fx } from '../core/fixed';
+import { HERO } from './heroes';
 import { sec } from '../sim/types';
 
-export type SkillBranch = 'Might' | 'Survival' | 'Tactics';
+export type SkillBranch = 'Passive' | 'Summon' | 'Attack';
+export type AttackEffect = 'flameAttacks' | 'axeAttacks' | 'frostAttacks' | 'swordAttacks';
+
+export interface PassiveSkill {
+  damagePct: number;
+  critPct: number;
+  attackRatePct: number;
+}
 
 export interface ActiveSkill {
   targeted: boolean;
@@ -11,105 +19,136 @@ export interface ActiveSkill {
   damage: number;
   damagePerLevel: number;
   duration?: number;
-  effect: 'whirlwind' | 'meteor' | 'heal' | 'frost' | 'storm' | 'sentry' | 'guardian' | 'wolves' | 'totem' | 'axeThrow' | 'swordWave' | 'greatSwing' | 'bear' | 'ogre' | 'flameAttacks' | 'axeAttacks' | 'frostAttacks';
+  effect: 'guardian' | AttackEffect | 'whirlwind' | 'meteor' | 'heal' | 'frost' | 'storm'
+    | 'sentry' | 'wolves' | 'totem' | 'axeThrow' | 'swordWave' | 'greatSwing' | 'bear' | 'ogre';
 }
 
 export interface SkillDef {
   id: number;
+  heroId: number;
   branch: SkillBranch;
   tier: number;
   name: string;
   desc: string;
   icon: string;
   requires: number;
+  passive?: PassiveSkill;
   active?: ActiveSkill;
 }
 
-const BASE_SKILLS: readonly SkillDef[] = [
-  { id: 0, branch: 'Might', tier: 1, name: 'War Beast Pack', desc: 'ACTIVE • Call great beasts that run onto the path and maul enemies.', icon: '🐻', requires: -1,
-    active: { targeted: true, radius: fx(1), castRange: fx(5), cooldown: sec(24), damage: 0, damagePerLevel: 0, effect: 'bear' } },
-  { id: 1, branch: 'Might', tier: 2, name: 'Whirlwind', desc: 'ACTIVE • Cleave and stagger every nearby ground enemy.', icon: '🌪', requires: 0,
-    active: { targeted: false, radius: fx(2.1), castRange: 0, cooldown: sec(9), damage: 62, damagePerLevel: 16, effect: 'whirlwind' } },
-  { id: 2, branch: 'Might', tier: 3, name: 'Comet Breaker', desc: 'ACTIVE • Call down a devastating meteor at long range.', icon: '☄', requires: 1,
-    active: { targeted: true, radius: fx(2.2), castRange: fx(6.5), cooldown: sec(15), damage: 185, damagePerLevel: 44, effect: 'meteor' } },
-  { id: 3, branch: 'Survival', tier: 1, name: 'Flamebound Weapon', desc: 'ACTIVE • Main attacks burn brighter and hit harder for 12 seconds.', icon: '🔥', requires: -1,
-    active: { targeted: false, radius: 0, castRange: 0, cooldown: sec(22), duration: sec(12), damage: 0, damagePerLevel: 0, effect: 'flameAttacks' } },
-  { id: 4, branch: 'Survival', tier: 2, name: 'Renewal', desc: 'ACTIVE • Restore 35% health and unleash a healing pulse.', icon: '✦', requires: 3,
-    active: { targeted: false, radius: fx(2), castRange: 0, cooldown: sec(18), damage: 0, damagePerLevel: 0, effect: 'heal' } },
-  { id: 5, branch: 'Survival', tier: 3, name: 'Winter Aegis', desc: 'ACTIVE • Freeze, damage, and slow all enemies around you.', icon: '❄', requires: 4,
-    active: { targeted: false, radius: fx(2.8), castRange: 0, cooldown: sec(14), damage: 48, damagePerLevel: 13, effect: 'frost' } },
-  { id: 6, branch: 'Tactics', tier: 1, name: 'Frostshot Stance', desc: 'ACTIVE • Main attacks become icy slowing bolts for 14 seconds.', icon: '🏹', requires: -1,
-    active: { targeted: false, radius: 0, castRange: 0, cooldown: sec(24), duration: sec(14), damage: 0, damagePerLevel: 0, effect: 'frostAttacks' } },
-  { id: 7, branch: 'Tactics', tier: 2, name: 'Runic Barrage', desc: 'ACTIVE • Blanket a chosen area with arcane projectiles.', icon: '✹', requires: 6,
-    active: { targeted: true, radius: fx(2.5), castRange: fx(6), cooldown: sec(12), damage: 38, damagePerLevel: 11, effect: 'storm' } },
-  { id: 8, branch: 'Tactics', tier: 3, name: 'Arcane Sentry', desc: 'ACTIVE • Deploy a rapid-firing magical sentry for 20 seconds.', icon: '♜', requires: 7,
-    active: { targeted: true, radius: fx(0.7), castRange: fx(5), cooldown: sec(17), damage: 0, damagePerLevel: 0, effect: 'sentry' } },
-  { id: 9, branch: 'Might', tier: 4, name: 'Titan Breaker', desc: 'ACTIVE • Launch a colossal sword wave through a chosen area.', icon: '🗡️', requires: 2,
-    active: { targeted: true, radius: fx(2.2), castRange: fx(5.5), cooldown: sec(16), damage: 145, damagePerLevel: 32, effect: 'swordWave' } },
-  { id: 10, branch: 'Might', tier: 5, name: 'Oathbound Sidekick', desc: 'ACTIVE • Call one little guardian that follows you and fights for 25 seconds.', icon: '🛡', requires: 9,
-    active: { targeted: false, radius: fx(0.8), castRange: 0, cooldown: sec(28), duration: sec(25), damage: 0, damagePerLevel: 0, effect: 'guardian' } },
-  { id: 11, branch: 'Survival', tier: 4, name: 'Ogre Pact', desc: 'ACTIVE • Summon a hulking ogre that marches onto the road and brawls.', icon: '👹', requires: 5,
-    active: { targeted: true, radius: fx(1), castRange: fx(5), cooldown: sec(28), damage: 0, damagePerLevel: 0, effect: 'ogre' } },
-  { id: 12, branch: 'Survival', tier: 5, name: 'Spirit Pack', desc: 'ACTIVE • Call persistent spirit wolves to fight beside the party.', icon: '🐺', requires: 11,
-    active: { targeted: true, radius: fx(1), castRange: fx(4), cooldown: sec(30), damage: 0, damagePerLevel: 0, effect: 'wolves' } },
-  { id: 13, branch: 'Tactics', tier: 4, name: 'Tempest Crown', desc: 'ACTIVE • Create a wide, lingering storm that shreds crowded waves.', icon: '⚡', requires: 8,
-    active: { targeted: true, radius: fx(3.4), castRange: fx(7), cooldown: sec(18), damage: 55, damagePerLevel: 14, effect: 'storm' } },
-  { id: 14, branch: 'Tactics', tier: 5, name: 'Eternal Totem', desc: 'ACTIVE • Plant a persistent runic familiar.', icon: '🔮', requires: 13,
-    active: { targeted: true, radius: fx(0.8), castRange: fx(6), cooldown: sec(30), damage: 0, damagePerLevel: 0, effect: 'totem' } },
-  // Advanced forks: each branch now splits after its second tier, letting a
-  // hero build toward burst, control, recovery, or companions.
-  { id: 15, branch: 'Might', tier: 3, name: 'Cyclone Axe', desc: 'ACTIVE • Swing a gigantic spectral axe through nearby enemies.', icon: '🪓', requires: 1,
-    active: { targeted: false, radius: fx(2.8), castRange: 0, cooldown: sec(13), damage: 105, damagePerLevel: 23, effect: 'greatSwing' } },
-  { id: 16, branch: 'Might', tier: 4, name: 'Starfall', desc: 'ACTIVE • Bombard a distant area with celestial fire.', icon: '🌠', requires: 15,
-    active: { targeted: true, radius: fx(2.6), castRange: fx(7.5), cooldown: sec(18), damage: 230, damagePerLevel: 48, effect: 'meteor' } },
-  { id: 17, branch: 'Might', tier: 5, name: 'Warband', desc: 'ACTIVE • Call two oathbound warriors that remain for the battle.', icon: '⚔️', requires: 16,
-    active: { targeted: true, radius: fx(1), castRange: fx(5), cooldown: sec(32), damage: 0, damagePerLevel: 0, effect: 'guardian' } },
-  { id: 18, branch: 'Might', tier: 6, name: 'Worldsplitter', desc: 'ACTIVE • Hurl a mountain-sized spinning axe that devastates its landing zone.', icon: '🪓', requires: 17,
-    active: { targeted: true, radius: fx(3.6), castRange: fx(6), cooldown: sec(24), damage: 340, damagePerLevel: 62, effect: 'axeThrow' } },
-  { id: 19, branch: 'Survival', tier: 3, name: 'Glacial Ring', desc: 'ACTIVE • Freeze a broad ring around your hero.', icon: '🧊', requires: 4,
-    active: { targeted: false, radius: fx(3.5), castRange: 0, cooldown: sec(18), damage: 74, damagePerLevel: 16, effect: 'frost' } },
-  { id: 20, branch: 'Survival', tier: 4, name: 'Executioner Stance', desc: 'ACTIVE • Main attacks become colossal axe blows for 12 seconds.', icon: '🪓', requires: 19,
-    active: { targeted: false, radius: 0, castRange: 0, cooldown: sec(22), duration: sec(12), damage: 0, damagePerLevel: 0, effect: 'axeAttacks' } },
-  { id: 21, branch: 'Survival', tier: 5, name: 'Frostbound Pack', desc: 'ACTIVE • Summon two enduring winter guardians.', icon: '🐾', requires: 20,
-    active: { targeted: true, radius: fx(1), castRange: fx(5), cooldown: sec(30), damage: 0, damagePerLevel: 0, effect: 'wolves' } },
-  { id: 22, branch: 'Survival', tier: 6, name: 'Aurora Haven', desc: 'ACTIVE • A vast restorative pulse that also harms nearby foes.', icon: '🌈', requires: 21,
-    active: { targeted: false, radius: fx(4), castRange: 0, cooldown: sec(24), damage: 110, damagePerLevel: 24, effect: 'heal' } },
-  { id: 23, branch: 'Tactics', tier: 3, name: 'Thunder Field', desc: 'ACTIVE • Saturate a chosen lane with crackling energy.', icon: '🌩️', requires: 7,
-    active: { targeted: true, radius: fx(3), castRange: fx(7), cooldown: sec(14), damage: 52, damagePerLevel: 13, effect: 'storm' } },
-  { id: 24, branch: 'Tactics', tier: 4, name: 'Runic Watcher', desc: 'ACTIVE • Place an enduring arcane watcher.', icon: '👁️', requires: 23,
-    active: { targeted: true, radius: fx(0.8), castRange: fx(6), cooldown: sec(25), damage: 0, damagePerLevel: 0, effect: 'sentry' } },
-  { id: 25, branch: 'Tactics', tier: 5, name: 'Twin Constructs', desc: 'ACTIVE • Deploy a pair of permanent clockwork familiars.', icon: '⚙️', requires: 24,
-    active: { targeted: true, radius: fx(1.1), castRange: fx(6), cooldown: sec(32), damage: 0, damagePerLevel: 0, effect: 'guardian' } },
-  { id: 26, branch: 'Tactics', tier: 6, name: 'Eye of the Tempest', desc: 'ACTIVE • Create the largest and longest-ranged storm.', icon: '🌀', requires: 25,
-    active: { targeted: true, radius: fx(4), castRange: fx(8), cooldown: sec(22), damage: 82, damagePerLevel: 18, effect: 'storm' } },
-  { id: 27, branch: 'Might', tier: 2, name: 'Blade Arc', desc: 'ACTIVE • Fire a broad crescent sword wave down the lane.', icon: '⚔️', requires: 0,
-    active: { targeted: true, radius: fx(1.7), castRange: fx(6), cooldown: sec(10), damage: 90, damagePerLevel: 19, effect: 'swordWave' } },
-  { id: 28, branch: 'Tactics', tier: 2, name: "Executioner's Toss", desc: 'ACTIVE • Throw an enormous spinning battle axe at long range.', icon: '🪓', requires: 6,
-    active: { targeted: true, radius: fx(2), castRange: fx(7), cooldown: sec(12), damage: 125, damagePerLevel: 25, effect: 'axeThrow' } },
-  { id: 29, branch: 'Survival', tier: 2, name: 'Colossal Cleave', desc: 'ACTIVE • Sweep a radiant greatsword around your hero.', icon: '🗡️', requires: 3,
-    active: { targeted: false, radius: fx(2.6), castRange: 0, cooldown: sec(11), damage: 82, damagePerLevel: 18, effect: 'greatSwing' } },
-];
+interface HeroTreeTheme {
+  heroId: number;
+  passiveNames: readonly [string, string, string];
+  summonNames: readonly [string, string, string];
+  attackNames: readonly [string, string, string];
+  helper: string;
+  weapon: string;
+  passiveIcon: string;
+  summonIcon: string;
+  attackIcon: string;
+  attackEffect: AttackEffect;
+}
 
-const ODYSSEY_SKILL_NAMES = [
-  "Artemis' Sacred Beasts", 'Bronze Whirlwind', "Zeus' Judgment",
-  'Fire of Hephaestus', 'Ambrosial Renewal', 'Aegis of Boreas',
-  "Apollo's Bow", "Athena's Barrage", 'Talos Sentry', 'Titan Breaker',
-  'Loyal Eumaeus', 'Cyclops Pact', "Hecate's Hounds", "Poseidon's Tempest",
-  'Oracle of Delphi', 'Achaean Cyclone', "Helios' Fall", 'Myrmidon Warband',
-  'Spear of Achilles', 'Ring of Boreas', 'Ajax Stance', 'Hounds of Hades',
-  "Calypso's Haven", "Zeus' Thunder Field", 'Eye of Argus', 'Daedalus Twins',
-  'Wrath of Poseidon', 'Kopis Arc', "Perseus' Toss", 'Cyclopean Cleave',
+const THEMES: readonly HeroTreeTheme[] = [
+  {
+    heroId: HERO.Paladin,
+    passiveNames: ['Veteran of Troy', "Athena's Counsel", 'King of Ithaca'],
+    summonNames: ['Argos Returns', 'Eumaeus at Arms', 'Ithacan Guard'],
+    attackNames: ['Bronze-Edged Arrows', 'Bow of the Beggar', "Odysseus' Reckoning"],
+    helper: 'a loyal Ithacan companion', weapon: 'main attacks become enormous piercing bronze shots',
+    passiveIcon: '♛', summonIcon: '🐕', attackIcon: '🏹', attackEffect: 'swordAttacks',
+  },
+  {
+    heroId: HERO.Orc,
+    passiveNames: ['Towering Stature', 'Sevenfold Hide', 'Bulwark of Achaea'],
+    summonNames: ['Teucer Arrives', 'Shield-Brother', 'Salamian Phalanx'],
+    attackNames: ['Heavy Kopis', 'Great Shield Bash', "Ajax's Rampage"],
+    helper: 'an armored Salamian shield-brother', weapon: 'main attacks become colossal axe-like cleaves',
+    passiveIcon: '🛡', summonIcon: '⚔', attackIcon: '🪓', attackEffect: 'axeAttacks',
+  },
+  {
+    heroId: HERO.DarkElf,
+    passiveNames: ['Herbal Lore', "Hecate's Student", 'Mistress of Aeaea'],
+    summonNames: ['Enchanted Boar', "Circe's Lion", 'Witch-Hound Pack'],
+    attackNames: ['Ember Wand', 'Transformation Hex', 'Fire of Aeaea'],
+    helper: 'an enchanted beast from Aeaea', weapon: 'main attacks become burning transformation bolts',
+    passiveIcon: '☾', summonIcon: '🐗', attackIcon: '🔥', attackEffect: 'flameAttacks',
+  },
+  {
+    heroId: HERO.HighElf,
+    passiveNames: ['Fleet-Footed', "Artemis' Favor", 'Calydonian Hunter'],
+    summonNames: ['Hunting Hound', 'Arcadian Stag', "Artemis' Lioness"],
+    attackNames: ['Moonlit Arrows', 'Piercing Volley', "Atalanta's Tempest"],
+    helper: 'a swift sacred hunting animal', weapon: 'main attacks become huge slowing moon-arrows',
+    passiveIcon: '🪽', summonIcon: '🐺', attackIcon: '🏹', attackEffect: 'frostAttacks',
+  },
+  {
+    heroId: HERO.Magician,
+    passiveNames: ['Cyclopean Strength', "Poseidon's Blood", 'Master Smith'],
+    summonNames: ['Cave Ram', 'Young Cyclops', 'Stone Giant'],
+    attackNames: ['Boulder Grip', 'Volcanic Stone', "Polyphemus' Avalanche"],
+    helper: 'a hulking creature from the Cyclops caves', weapon: 'main attacks become gigantic hurled boulders and axes',
+    passiveIcon: '👁', summonIcon: '🐏', attackIcon: '🪨', attackEffect: 'axeAttacks',
+  },
 ] as const;
 
-export const SKILLS: readonly SkillDef[] = BASE_SKILLS.map((skill, index) => ({
-  ...skill,
-  name: ODYSSEY_SKILL_NAMES[index] ?? skill.name,
-}));
+const makeTree = (theme: HeroTreeTheme, heroIndex: number): SkillDef[] => {
+  const base = heroIndex * 9;
+  const result: SkillDef[] = [];
+  for (let tier = 1; tier <= 3; tier++) {
+    const id = base + tier - 1;
+    result.push({
+      id, heroId: theme.heroId, branch: 'Passive', tier,
+      name: theme.passiveNames[tier - 1], icon: theme.passiveIcon,
+      desc: `PASSIVE • Permanently gain ${8 + tier * 4}% attack damage, ${tier * 3}% critical chance, and ${tier * 4}% attack speed.`,
+      requires: tier === 1 ? -1 : id - 1,
+      passive: { damagePct: 8 + tier * 4, critPct: tier * 3, attackRatePct: tier * 4 },
+    });
+  }
+  for (let tier = 1; tier <= 3; tier++) {
+    const id = base + 3 + tier - 1;
+    const duration = 14 + tier * 5;
+    result.push({
+      id, heroId: theme.heroId, branch: 'Summon', tier,
+      name: theme.summonNames[tier - 1], icon: theme.summonIcon,
+      desc: `ACTIVE • Call ${theme.helper} that follows you and fights for ${duration} seconds.`,
+      requires: tier === 1 ? -1 : id - 1,
+      active: { targeted: false, radius: fx(0.8), castRange: 0, cooldown: sec(31 - tier * 3), duration: sec(duration), damage: 0, damagePerLevel: 0, effect: 'guardian' },
+    });
+  }
+  for (let tier = 1; tier <= 3; tier++) {
+    const id = base + 6 + tier - 1;
+    const duration = 8 + tier * 3;
+    result.push({
+      id, heroId: theme.heroId, branch: 'Attack', tier,
+      name: theme.attackNames[tier - 1], icon: theme.attackIcon,
+      desc: `ACTIVE • For ${duration} seconds, ${theme.weapon}; damage is increased by 35%.`,
+      requires: tier === 1 ? -1 : id - 1,
+      active: { targeted: false, radius: 0, castRange: 0, cooldown: sec(25 - tier * 2), duration: sec(duration), damage: 0, damagePerLevel: 0, effect: theme.attackEffect },
+    });
+  }
+  return result;
+};
+
+export const SKILLS: readonly SkillDef[] = THEMES.flatMap(makeTree);
 
 export const skillDef = (id: number): SkillDef => SKILLS[id] ?? SKILLS[0];
 export const hasSkill = (skills: readonly number[], id: number): boolean => skills.includes(id);
+export const heroSkills = (heroId: number): readonly SkillDef[] => SKILLS.filter((s) => s.heroId === heroId);
 export const activeSkills = (skills: readonly number[]): readonly SkillDef[] =>
   SKILLS.filter((s) => !!s.active && hasSkill(skills, s.id));
-export function availableSkills(skills: readonly number[]): readonly SkillDef[] {
-  return SKILLS.filter((s) => !hasSkill(skills, s.id) && (s.requires < 0 || hasSkill(skills, s.requires)));
+export const passiveBonuses = (skills: readonly number[]): PassiveSkill => {
+  const total: PassiveSkill = { damagePct: 0, critPct: 0, attackRatePct: 0 };
+  for (const id of skills) {
+    const bonus = skillDef(id).passive;
+    if (!bonus) continue;
+    total.damagePct += bonus.damagePct;
+    total.critPct += bonus.critPct;
+    total.attackRatePct += bonus.attackRatePct;
+  }
+  return total;
+};
+export function availableSkills(skills: readonly number[], heroId: number): readonly SkillDef[] {
+  return SKILLS.filter((s) => s.heroId === heroId && !hasSkill(skills, s.id)
+    && (s.requires < 0 || hasSkill(skills, s.requires)));
 }

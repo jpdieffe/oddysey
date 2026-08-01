@@ -28,7 +28,7 @@ import {
   type RelicMods,
 } from '../content/items';
 import { generateWave, WaveMod } from '../content/waves';
-import { availableSkills, hasSkill, skillDef } from '../content/skills';
+import { availableSkills, hasSkill, passiveBonuses, skillDef } from '../content/skills';
 import { CmdType, Track, type Command } from './commands';
 import { DIFFICULTIES, findEnemy, findTower, nextId, refreshShop } from './state';
 import {
@@ -153,7 +153,7 @@ function applyCommand(ctx: Ctx, c: Command): void {
 }
 
 function cmdChooseSkill(ctx: Ctx, p: PlayerState, skillId: number): void {
-  if (p.skillPoints <= 0 || !availableSkills(p.skills).some((s) => s.id === skillId)) return;
+  if (p.skillPoints <= 0 || !availableSkills(p.skills, p.hero.defId).some((s) => s.id === skillId)) return;
   p.skills.push(skillId);
   p.skills.sort((a, b) => a - b);
   p.skillPoints--;
@@ -336,8 +336,8 @@ function cmdAbility(ctx: Ctx, p: PlayerState, skillId: number, x: Fx, y: Fx): vo
     const sy = h.y + fxMul(h.dy, reach);
     spawnWeaponProjectile(ctx, p.idx, h.x, h.y, sx, sy, ab.radius, dmg, ProjKind.GiantAxe);
     emit(ctx, EventKind.Shot, h.x, h.y, -3, ProjKind.GiantAxe, p.idx, sx, sy);
-  } else if (effect === 'flameAttacks' || effect === 'axeAttacks' || effect === 'frostAttacks') {
-    p.attackBuffKind = effect === 'flameAttacks' ? 1 : effect === 'axeAttacks' ? 2 : 3;
+  } else if (effect === 'flameAttacks' || effect === 'axeAttacks' || effect === 'frostAttacks' || effect === 'swordAttacks') {
+    p.attackBuffKind = effect === 'flameAttacks' ? 1 : effect === 'axeAttacks' ? 2 : effect === 'frostAttacks' ? 3 : 4;
     p.attackBuffT = ab.duration ?? sec(12);
     emit(ctx, EventKind.HeroAbility, h.x, h.y, AbilityKind.ShieldSlam, fx(1.2), p.idx);
   } else if (effect === 'bear' || effect === 'ogre') {
@@ -353,17 +353,11 @@ function cmdAbility(ctx: Ctx, p: PlayerState, skillId: number, x: Fx, y: Fx): vo
   } else if (effect === 'sentry' || effect === 'totem') {
     spawnSentry(ctx, p.idx, tx, ty, -1, effect === 'totem' ? TOWER.Totem : TOWER.Sentinel);
     emit(ctx, EventKind.HeroAbility, tx, ty, AbilityKind.Sentry, ab.radius, p.idx);
-  } else if (effect === 'guardian' || effect === 'wolves') {
-    if (effect === 'guardian' && skillId === 10) {
-      spawnSentry(ctx, p.idx, h.x, h.y, ab.duration ?? sec(25), TOWER.Barracks, 2);
-      emit(ctx, EventKind.SoldierSpawn, h.x, h.y, TOWER.Barracks, 0, p.idx);
-    } else {
-    const summonDef = effect === 'wolves' ? TOWER.Kennel : (skillId === 25 ? TOWER.Rune : TOWER.Templar);
-    const duration = effect === 'wolves' ? -2 : -1;
-    spawnSentry(ctx, p.idx, tx - fx(0.6), ty, duration, summonDef);
-    spawnSentry(ctx, p.idx, tx + fx(0.6), ty, duration, summonDef);
-    }
-    emit(ctx, EventKind.HeroAbility, tx, ty, AbilityKind.Sentry, ab.radius, p.idx);
+  } else if (effect === 'guardian') {
+    const summonDefs = [TOWER.Barracks, TOWER.Barracks, TOWER.Kennel, TOWER.Kennel, TOWER.Barracks] as const;
+    const summonDef = summonDefs[h.defId] ?? TOWER.Barracks;
+    spawnSentry(ctx, p.idx, h.x, h.y, ab.duration ?? sec(20), summonDef, 2);
+    emit(ctx, EventKind.SoldierSpawn, h.x, h.y, summonDef, 0, p.idx);
   } else switch (baseAb.kind) {
     case AbilityKind.ShieldSlam: {
       for (const e of ctx.s.enemies) {
@@ -1954,11 +1948,12 @@ function updateHeroes(ctx: Ctx): void {
     h.dx = tmpVec.x;
     h.dy = tmpVec.y;
     h.targetId = target.id;
-    h.attackCd = d.attackCd;
+    const passive = passiveBonuses(p.skills);
+    h.attackCd = Math.max(1, d.attackCd - pct(d.attackCd, Math.min(70, passive.attackRatePct)));
 
     let damage = d.damage + d.damagePerLevel * (h.level - 1);
-    damage += pct(damage, m.heroDamagePct + (p.attackBuffKind > 0 ? 35 : 0));
-    const critPct = d.critPct + m.critPct;
+    damage += pct(damage, m.heroDamagePct + passive.damagePct + (p.attackBuffKind > 0 ? 35 : 0));
+    const critPct = d.critPct + m.critPct + passive.critPct;
     if (critPct > 0 && chance(s as RngHolder, Math.min(100, critPct))) {
       damage = Math.floor((damage * d.critMult) / 100);
     }
@@ -1993,14 +1988,14 @@ function heroAttackStats(d: ReturnType<typeof heroDef>, damage: number, buffKind
     splash: d.splash,
     dmgType: buffKind === 1 ? DmgType.Fire : buffKind === 3 ? DmgType.Frost : d.dmgType,
     projSpeed: d.projSpeed,
-    projKind: buffKind === 1 ? ProjKind.Ember : buffKind === 2 ? ProjKind.GiantAxe : buffKind === 3 ? ProjKind.Shard : d.projKind,
+    projKind: buffKind === 1 ? ProjKind.Ember : buffKind === 2 ? ProjKind.GiantAxe : buffKind === 3 ? ProjKind.Shard : buffKind === 4 ? ProjKind.SwordWave : d.projKind,
     slowPct: buffKind === 3 ? 38 : 0,
     slowT: buffKind === 3 ? sec(1.5) : 0,
     burnDps: buffKind === 1 ? Math.max(8, Math.floor(damage / 4)) : d.burnDps,
     burnT: buffKind === 1 ? sec(2) : d.burnT,
     poisonDps: d.poisonDps,
     poisonT: d.poisonT,
-    armorShred: d.armorShred,
+    armorShred: buffKind === 4 ? Math.max(8, d.armorShred) : d.armorShred,
     critMult: d.critMult,
   };
 }

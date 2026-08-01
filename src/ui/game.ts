@@ -6,7 +6,7 @@ import { drawTowerSprite } from '../render/towerart';
 import { FXART } from '../content/art';
 import { enemyDef } from '../content/enemies';
 import { HERO, heroDef } from '../content/heroes';
-import { activeSkills, availableSkills, skillDef, SKILLS } from '../content/skills';
+import { activeSkills, availableSkills, heroSkills, skillDef } from '../content/skills';
 import { ItemKind, itemDef, relicDef } from '../content/items';
 import {
   MAX_TOWER_LEVEL, TOWERS, TOWER_CLASSES, computeTowerStats, towerDef,
@@ -679,8 +679,9 @@ export class GameScreen {
 
   private openSkillTree(): void {
     if (this.me.skillPoints <= 0 || this.overlay) return;
-    const choices = availableSkills(this.me.skills);
-    let selected = choices[0] ?? SKILLS[0];
+    const treeSkills = heroSkills(this.me.hero.defId);
+    const choices = availableSkills(this.me.skills, this.me.hero.defId);
+    let selected = choices[0] ?? treeSkills[0];
     const panel = el('div', { class: 'skill-panel' },
       el('div', { class: 'skill-kicker' }, 'HERO LEVEL UP'),
       el('h2', {}, 'Choose your path'),
@@ -714,9 +715,9 @@ export class GameScreen {
         }, owned ? '✓ Learned' : available ? 'Unlock' : '🔒 Locked'),
       );
     };
-    for (const branch of ['Might', 'Survival', 'Tactics'] as const) {
+    for (const branch of ['Passive', 'Summon', 'Attack'] as const) {
       const path = el('div', { class: `skill-path ${branch.toLowerCase()}` }, el('div', { class: 'branch-name' }, branch));
-      for (const sk of SKILLS.filter((v) => v.branch === branch)) {
+      for (const sk of treeSkills.filter((v) => v.branch === branch)) {
         const owned = this.me.skills.includes(sk.id);
         const available = choices.some((v) => v.id === sk.id);
         const node = tapButton(`skill-node${owned ? ' owned' : ''}${available ? ' available' : ' locked'}`, () => {
