@@ -97,6 +97,19 @@ It was also verified live between two browsers on a real WebRTC data channel: af
 wave both peers independently reported wave 1, 9 kills, 20 lives and gold `[260, 463]`,
 with 108 tick-fingerprints confirmed identical and zero desyncs.
 
+For a repeatable real-browser multiplayer performance soak:
+
+```bash
+npm run check:clients
+```
+
+This starts the development server, opens two isolated Chromium clients, connects them
+through the real WebRTC host/guest flow, and has both heroes move, cast powers, and start
+waves for 30 seconds. It fails on low FPS, slow 95th-percentile frames, excessive 50ms
+frames, long lockstep stalls, desyncs, insufficient verified hashes, or clients drifting
+more than two simulation ticks apart. Set `SOAK_SECONDS=120` for a longer run, or pass an
+already-running URL as the final argument to test a deployed build.
+
 ### Phones lock and tabs get backgrounded
 
 Mobile browsers kill `requestAnimationFrame` the instant you switch apps, which in naive
