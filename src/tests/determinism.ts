@@ -8,6 +8,8 @@
 
 import { fxMul, fxDiv, fxSqrt, fx, FX_ONE } from '../core/fixed';
 import { isBuildable, buildMapRuntime } from '../content/maps';
+import { ENEMY } from '../content/enemies';
+import { generateWave, unlockedBossEchoes } from '../content/waves';
 import { TOWERS } from '../content/towers';
 import { build, toggleReady, upgrade, moveHero, type Command } from '../sim/commands';
 import { step } from '../sim/sim';
@@ -202,6 +204,31 @@ export function runChecks(): Report {
   } else {
     lines.push('PASS  fixed-point multiply/divide/sqrt are exact (220k random cases)');
   }
+
+  const expectedBosses = [
+    [ENEMY.Infernal, ENEMY.Minotaur],
+    [ENEMY.CircesBeast, ENEMY.Hydra],
+    [ENEMY.Charybdis, ENEMY.BoneDragon],
+  ];
+  const expectedEchoes = [
+    [ENEMY.YoungCyclops, ENEMY.MinotaurWarrior],
+    [ENEMY.EnchantedBoar, ENEMY.HydraSpawn],
+    [ENEMY.CharybdisSpawn, ENEMY.ScyllaSpawn],
+  ];
+  for (let mapId = 0; mapId < expectedBosses.length; mapId++) {
+    const first = generateWave(123, 5, 1, mapId).orders.find((o) => o.boss)?.defId;
+    const second = generateWave(123, 10, 1, mapId).orders.find((o) => o.boss)?.defId;
+    const before = unlockedBossEchoes(mapId, 5);
+    const after = unlockedBossEchoes(mapId, 6);
+    const inherited = unlockedBossEchoes(mapId + 1, 1);
+    if (first !== expectedBosses[mapId][0] || second !== expectedBosses[mapId][1]
+      || before.includes(expectedEchoes[mapId][0]) || !after.includes(expectedEchoes[mapId][0])
+      || (mapId < 2 && !inherited.includes(expectedEchoes[mapId][1]))) {
+      ok = false;
+      lines.push(`FAIL  map ${mapId}: mythic boss or post-boss unlock progression is wrong`);
+    }
+  }
+  if (ok) lines.push('PASS  each book has unique mythic bosses and unlocks their weaker forms afterward');
 
   for (const mapId of [0, 1, 2]) {
     const seed = 0x1234abcd ^ (mapId * 7919);

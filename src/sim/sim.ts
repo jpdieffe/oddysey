@@ -574,7 +574,7 @@ function startWave(ctx: Ctx): void {
   s.wave++;
   for (const p of s.players) p.ready = false;
 
-  const plan = generateWave(s.seed, s.wave, ctx.rt.lanes.length);
+  const plan = generateWave(s.seed, s.wave, ctx.rt.lanes.length, s.mapId);
   s.waveMod = plan.mod;
   s.waveReward = plan.reward;
   s.spawns = plan.orders.map((o) => ({ ...o, at: o.at + s.tick }));

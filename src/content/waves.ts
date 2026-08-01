@@ -43,9 +43,31 @@ const POOL: readonly PoolEntry[] = [
   { defId: ENEMY.Necromancer, cost: 38, minWave: 14, weight: 3, clump: 1 },
 ];
 
-const BOSS_ROTATION: readonly number[] = [
-  ENEMY.Infernal, ENEMY.BoneDragon, ENEMY.ObsidianColossus,
+const BOOK_BOSSES: readonly (readonly [number, number])[] = [
+  [ENEMY.Infernal, ENEMY.Minotaur],
+  [ENEMY.CircesBeast, ENEMY.Hydra],
+  [ENEMY.Charybdis, ENEMY.BoneDragon],
 ];
+
+const BOSS_ECHOES: Readonly<Record<number, PoolEntry>> = {
+  [ENEMY.Infernal]: { defId: ENEMY.YoungCyclops, cost: 38, minWave: 1, weight: 4, clump: 2 },
+  [ENEMY.Minotaur]: { defId: ENEMY.MinotaurWarrior, cost: 42, minWave: 1, weight: 4, clump: 2 },
+  [ENEMY.CircesBeast]: { defId: ENEMY.EnchantedBoar, cost: 34, minWave: 1, weight: 4, clump: 3 },
+  [ENEMY.Hydra]: { defId: ENEMY.HydraSpawn, cost: 48, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.Charybdis]: { defId: ENEMY.CharybdisSpawn, cost: 50, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.BoneDragon]: { defId: ENEMY.ScyllaSpawn, cost: 46, minWave: 1, weight: 3, clump: 2 },
+};
+
+/** Mythic monsters that have been defeated and may now appear as normal units. */
+export function unlockedBossEchoes(mapId: number, wave: number): readonly number[] {
+  const book = Math.max(0, Math.min(BOOK_BOSSES.length - 1, mapId));
+  const echoes: number[] = [];
+  for (let completedBook = 0; completedBook < book; completedBook++) {
+    for (const defeatedBoss of BOOK_BOSSES[completedBook]) echoes.push(BOSS_ECHOES[defeatedBoss].defId);
+  }
+  if (wave > 5) echoes.push(BOSS_ECHOES[BOOK_BOSSES[book][0]].defId);
+  return echoes;
+}
 
 export interface WavePlan {
   wave: number;
@@ -84,7 +106,7 @@ function rollMod(rng: RngHolder, wave: number): number {
  * Only depends on (matchSeed, wave, laneCount), so both peers generate exactly
  * the same wave without exchanging a single byte about it.
  */
-export function generateWave(matchSeed: number, wave: number, laneCount: number): WavePlan {
+export function generateWave(matchSeed: number, wave: number, laneCount: number, mapId = 0): WavePlan {
   const rng: RngHolder = { rng: deriveSeed(matchSeed, wave * 7919 + 13) };
   const boss = isBossWave(wave);
   const mod = rollMod(rng, wave);
@@ -94,7 +116,11 @@ export function generateWave(matchSeed: number, wave: number, laneCount: number)
   if (mod === WaveMod.Armoured) hpPct = Math.floor((hpPct * 110) / 100);
   if (mod === WaveMod.Swarm) hpPct = Math.floor((hpPct * 70) / 100);
 
-  const available = POOL.filter((p) => p.minWave <= wave);
+  const book = Math.max(0, Math.min(BOOK_BOSSES.length - 1, mapId));
+  const unlockedEchoes = unlockedBossEchoes(book, wave).map((defId) =>
+    Object.values(BOSS_ECHOES).find((entry) => entry.defId === defId)!,
+  );
+  const available = [...POOL.filter((p) => p.minWave <= wave), ...unlockedEchoes];
   let budget = 55 + 34 * wave;
   if (mod === WaveMod.Swarm) budget = Math.floor(budget * 1.9);
 
@@ -127,20 +153,17 @@ export function generateWave(matchSeed: number, wave: number, laneCount: number)
   }
 
   if (boss) {
-    const bossIdx = Math.floor(wave / 5) - 1;
-    const bossId = BOSS_ROTATION[bossIdx % BOSS_ROTATION.length];
-    const extraBosses = Math.floor(wave / 20);
-    for (let i = 0; i <= extraBosses; i++) {
-      orders.push({
-        at: sec(3) + i * sec(6),
-        defId: bossId,
-        lane: nextInt(rng, laneCount),
-        wave,
-        hpPct: Math.floor((hpBase * 100) / 100),
-        boss: true,
-        mod: mod === WaveMod.Swarm ? WaveMod.None : mod,
-      });
-    }
+    const bossSlot = Math.min(1, Math.floor(wave / 5) - 1);
+    const bossId = BOOK_BOSSES[book][bossSlot];
+    orders.push({
+      at: sec(3),
+      defId: bossId,
+      lane: nextInt(rng, laneCount),
+      wave,
+      hpPct: hpBase,
+      boss: true,
+      mod: mod === WaveMod.Swarm ? WaveMod.None : mod,
+    });
   }
 
   // Stable ordering: the spawner pops from the front, so sort by time then by a

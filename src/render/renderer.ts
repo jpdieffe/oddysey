@@ -2,7 +2,7 @@ import { FX_ONE, fxToFloat } from '../core/fixed';
 import { makeLocalRng } from '../core/rng';
 import { CRYSTAL, FXART } from '../content/art';
 import { buildMapRuntime, isBuildable, isBuildSite, type MapRuntime } from '../content/maps';
-import { enemyDef, ENEMY_TINTS } from '../content/enemies';
+import { enemyDef, ENEMY, ENEMY_TINTS } from '../content/enemies';
 import { HERO, heroDef } from '../content/heroes';
 import { itemDef } from '../content/items';
 import { towerDef, computeTowerStats } from '../content/towers';
@@ -26,6 +26,11 @@ export const PLAYER_GLOW = [
 ];
 
 const DMG_COLORS = ['#ffffff', '#ff8a3c', '#7ee8ff', '#c39cff', '#9ff05a', '#ffd447'];
+const CYCLOPS_SPRITES = new Image();
+CYCLOPS_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/cyclops-strip.png`;
+const CYCLOPS_FRAME_W = 256;
+const CYCLOPS_FRAME_Y = 125;
+const CYCLOPS_FRAME_H = 390;
 
 export interface ViewOptions {
   localPlayer: number;
@@ -695,7 +700,11 @@ export class Renderer {
         ctx.restore();
       }
 
-      atlas.drawTinted(ctx, d.art, x, y - lift + bob, size, rot, color, spawnFade);
+      if (e.defId === ENEMY.Infernal || e.defId === ENEMY.YoungCyclops) {
+        this.drawCyclops(e, x, y - lift + bob, size, spawnFade);
+      } else {
+        atlas.drawTinted(ctx, d.art, x, y - lift + bob, size, rot, color, spawnFade);
+      }
 
       if (e.burnT > 0) {
         atlas.draw(ctx, FXART.flameSmall, x, y - lift - size * 0.35 + bob,
@@ -717,6 +726,26 @@ export class Renderer {
 
       this.drawEnemyBars(e, x, y - lift + bob, size);
     }
+  }
+
+  private drawCyclops(e: Enemy, x: number, y: number, size: number, alpha: number): void {
+    if (!CYCLOPS_SPRITES.complete || CYCLOPS_SPRITES.naturalWidth === 0) return;
+    const attacking = e.blockedBy !== 0;
+    const cycle = Math.floor((this.time + e.id * 73) / 145);
+    const frame = attacking ? 5 + (cycle % 3) : cycle % 5;
+    const h = size * 1.35;
+    const w = h * (CYCLOPS_FRAME_W / CYCLOPS_FRAME_H);
+    const facesRight = e.dx > 0;
+    this.ctx.save();
+    this.ctx.globalAlpha *= alpha;
+    this.ctx.translate(x, y + size * 0.08);
+    this.ctx.scale(facesRight ? -1 : 1, 1);
+    this.ctx.drawImage(
+      CYCLOPS_SPRITES,
+      frame * CYCLOPS_FRAME_W, CYCLOPS_FRAME_Y, CYCLOPS_FRAME_W, CYCLOPS_FRAME_H,
+      -w / 2, -h * 0.72, w, h,
+    );
+    this.ctx.restore();
   }
 
   private drawEnemyBars(e: Enemy, x: number, y: number, size: number): void {
