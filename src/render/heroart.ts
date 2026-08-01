@@ -25,6 +25,11 @@ AJAX_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/ajax-strip.png`;
 const AJAX_FRAME_Y = 175;
 const AJAX_FRAME_H = 360;
 
+const CIRCE_SPRITES = new Image();
+CIRCE_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/circe-strip.png`;
+const CIRCE_FRAME_Y = 185;
+const CIRCE_FRAME_H = 365;
+
 const POLYPHEMUS_SPRITES = new Image();
 POLYPHEMUS_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/cyclops-strip.png`;
 const POLYPHEMUS_FRAME_Y = 125;
@@ -665,6 +670,7 @@ export function drawHeroSprite(
 
   if (defId === HERO.Paladin && drawRasterHero(ctx, ODYSSEUS_SPRITES, ODYSSEUS_FRAME_Y, ODYSSEUS_FRAME_H, x, y, size, state, 1.22)) return;
   if (defId === HERO.Orc && drawRasterHero(ctx, AJAX_SPRITES, AJAX_FRAME_Y, AJAX_FRAME_H, x, y, size, state, 1.28)) return;
+  if (defId === HERO.DarkElf && drawRasterHero(ctx, CIRCE_SPRITES, CIRCE_FRAME_Y, CIRCE_FRAME_H, x, y, size, state, 1.25)) return;
   if (defId === HERO.Magician && drawRasterHero(ctx, POLYPHEMUS_SPRITES, POLYPHEMUS_FRAME_Y, POLYPHEMUS_FRAME_H, x, y, size, state, 1.35)) return;
 
   ctx.save();
