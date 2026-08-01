@@ -233,10 +233,10 @@ export const ENEMIES: readonly EnemyDef[] = [
     desc: 'A lesser bull-warrior released after the labyrinth lord falls.',
   }),
   def({
-    id: ENEMY.EnchantedBoar, key: 'enchanted-boar', name: 'Enchanted Boar',
+    id: ENEMY.EnchantedBoar, key: 'lesser-chimera', name: 'Lesser Chimera',
     hp: 300, speed: cps(1.2), armor: 5, bounty: 28, xp: 11,
     scale: fx(1.15), art: UNIT.tankSand, tint: 6,
-    desc: "One of Circe's transformed beasts, now roaming the islands.",
+    desc: "A smaller spawn of Circe's many-headed champion, now roaming normal waves.",
   }),
   def({
     id: ENEMY.HydraSpawn, key: 'lesser-hydra', name: 'Lesser Hydra',
