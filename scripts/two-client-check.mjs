@@ -6,6 +6,8 @@ import path from 'node:path';
 const projectDir = path.resolve(import.meta.dirname, '..');
 const baseUrl = process.argv[2] ?? 'http://127.0.0.1:4183';
 const soakSeconds = Number(process.env.SOAK_SECONDS ?? 30);
+const untilLevelComplete = process.env.UNTIL_LEVEL_COMPLETE === '1';
+const levelTimeoutSeconds = Number(process.env.LEVEL_TIMEOUT_SECONDS ?? 600);
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const deadline = (seconds) => Date.now() + seconds * 1000;
 
@@ -117,9 +119,13 @@ async function clickText(client, text) {
 }
 
 async function startAutoplayer(client) {
-  await client.evaluate(`(() => {
+  await client.evaluate(`(async () => {
+    const [commands, maps, skills] = await Promise.all([
+      import('/src/sim/commands.ts'), import('/src/content/maps.ts'), import('/src/content/skills.ts'),
+    ]);
     const perf = window.__odysseyPerf = {
       frameTimes: [], samples: [], longTasks: [], startedAt: performance.now(), moves: 0, casts: 0, readyClicks: 0,
+      builtSites: new Set(), upgraded: new Set(), skillQueuedAt: -1,
     };
     let previous = performance.now();
     const frame = (now) => { perf.frameTimes.push(now - previous); previous = now; requestAnimationFrame(frame); };
@@ -132,19 +138,32 @@ async function startAutoplayer(client) {
       const state = window.__bulwark?.state();
       const lockstep = window.__bulwark?.lockstep;
       if (!canvas || !state || !lockstep) return;
-      const ready = document.querySelector('.ready-btn');
-      if (ready && getComputedStyle(ready).display !== 'none' && !state.players[lockstep.localPlayer]?.ready) {
-        ready.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); perf.readyClicks++;
+      const player = lockstep.localPlayer; const me = state.players[player]; const map = maps.MAPS[state.mapId];
+      const choices = skills.availableSkills(me.skills, me.hero.defId);
+      if (me.skillPoints > 0 && choices.length && perf.skillQueuedAt !== state.tick) {
+        lockstep.queue(commands.chooseSkill(player, choices[0].id)); perf.skillQueuedAt = state.tick;
+      }
+      if (state.phase === 0) {
+        for (let i=player; i<map.buildSites.length && me.gold>=70; i+=state.players.length) {
+          const [cx,cy]=map.buildSites[i]; const key=cx+','+cy;
+          if (perf.builtSites.has(key) || state.towers.some(t=>!t.temp&&t.cx===cx&&t.cy===cy)) continue;
+          lockstep.queue(commands.build(player, player % 2, cx, cy)); perf.builtSites.add(key); break;
+        }
+        const tower=state.towers.find(t=>!t.temp&&t.owner===player&&t.level<6);
+        const upgradeKey=state.wave+':'+tower?.id;
+        if(tower&&me.gold>=80&&!perf.upgraded.has(upgradeKey)){lockstep.queue(commands.upgrade(player,tower.id,state.wave%2));perf.upgraded.add(upgradeKey);}
+        if (!me.ready) { lockstep.queue(commands.toggleReady(player)); perf.readyClicks++; }
       }
       const rect = canvas.getBoundingClientRect();
       const phase = (perf.moves + ${client.id} * 7) * 0.71;
       const x = rect.left + rect.width * (0.28 + 0.42 * ((Math.sin(phase) + 1) / 2));
       const y = rect.top + rect.height * (0.25 + 0.45 * ((Math.cos(phase * 0.83) + 1) / 2));
-      for (const type of ['pointerdown', 'pointerup']) canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
+      const target=state.enemies.find(e=>!e.dead);
+      if(target) lockstep.queue(commands.moveHero(player,target.x,target.y));
+      else for (const type of ['pointerdown', 'pointerup']) canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
       perf.moves++;
       if (perf.moves % 4 === 0) {
-        const power = document.querySelector('.power-slot');
-        if (power) { power.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x, clientY: y, pointerId: 2 })); canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x, clientY: y, pointerId: 2 })); perf.casts++; }
+        const aim=target??me.hero; lockstep.queue(commands.useAbility(player,-1,aim.x,aim.y)); perf.casts++;
       }
     };
     perf.actionTimer = setInterval(act, 450);
@@ -167,7 +186,7 @@ async function collect(client) {
     return { client: window.__bulwark.lockstep.localPlayer+1, elapsedMs: Math.round(elapsed), frames: perf.frameTimes.length,
       fps: +(perf.frameTimes.length*1000/elapsed).toFixed(1), p50FrameMs:+pct(.5).toFixed(1), p95FrameMs:+pct(.95).toFixed(1), p99FrameMs:+pct(.99).toFixed(1), maxFrameMs:+(sorted.at(-1)??0).toFixed(1),
       framesOver25Ms:perf.frameTimes.filter(x=>x>25).length, framesOver50Ms:perf.frameTimes.filter(x=>x>50).length,
-      longTasks:perf.longTasks.length,longTaskMs:+perf.longTasks.reduce((a,b)=>a+b,0).toFixed(1),tick:state.tick,wave:state.wave,enemies:state.enemies.length,
+      longTasks:perf.longTasks.length,longTaskMs:+perf.longTasks.reduce((a,b)=>a+b,0).toFixed(1),tick:state.tick,wave:state.wave,enemies:state.enemies.length,lives:state.lives,gameOver:state.gameOver,cleared:state.gameOver&&state.lives>0&&state.wave>=10,
       hash:window.__bulwark.hash(),rttMs:net.rttMs,inputDelay:net.inputDelay,verifiedTicks:net.verifiedTicks,desynced:net.desynced,
       stalledSamples,maxStallMs,moves:perf.moves,casts:perf.casts,readyClicks:perf.readyClicks };
   })()`);
@@ -185,6 +204,7 @@ function assess(results) {
     if (result.moves < soakSeconds) failures.push(`client ${result.client} autoplayer produced too few actions`);
   }
   if (Math.abs(results[0].tick - results[1].tick) > 2) failures.push(`clients ended ${Math.abs(results[0].tick-results[1].tick)} ticks apart`);
+  if (untilLevelComplete && results.some((result) => !result.cleared)) failures.push(`Book 1 was not cleared (wave ${results[0].wave}, lives ${results[0].lives})`);
   return failures;
 }
 
@@ -209,9 +229,18 @@ try {
   await waitFor(host, 'window.__bulwark?.state()', 'host game');
   await waitFor(guest, 'window.__bulwark?.state()', 'guest game');
   await Promise.all([startAutoplayer(host), startAutoplayer(guest)]);
-  console.log(`Two real WebRTC clients are auto-playing for ${soakSeconds}s (room ${code})...`);
-  const until = deadline(soakSeconds);
-  while (Date.now() < until) { await wait(Math.min(1000, until - Date.now())); }
+  console.log(untilLevelComplete
+    ? `Two real WebRTC clients are auto-playing through Book 1 (room ${code}, ${levelTimeoutSeconds}s timeout)...`
+    : `Two real WebRTC clients are auto-playing for ${soakSeconds}s (room ${code})...`);
+  const until = deadline(untilLevelComplete ? levelTimeoutSeconds : soakSeconds);
+  while (Date.now() < until) {
+    if (untilLevelComplete) {
+      const status = await host.evaluate(`(() => { const s=window.__bulwark?.state(); return s&&{gameOver:s.gameOver,wave:s.wave,lives:s.lives}; })()`);
+      if (status?.gameOver) break;
+      if (status?.wave && status.wave !== globalThis.lastReportedWave) { globalThis.lastReportedWave=status.wave; console.log(`  reached wave ${status.wave}, ${status.lives} lives`); }
+    }
+    await wait(Math.min(1000, until - Date.now()));
+  }
   const results = await Promise.all([collect(host), collect(guest)]);
   console.table(results.map(({ hash, ...rest }) => rest));
   const failures = assess(results);

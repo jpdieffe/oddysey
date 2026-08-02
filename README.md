@@ -110,6 +110,17 @@ frames, long lockstep stalls, desyncs, insufficient verified hashes, or clients 
 more than two simulation ticks apart. Set `SOAK_SECONDS=120` for a longer run, or pass an
 already-running URL as the final argument to test a deployed build.
 
+To make the bots build and upgrade towers, learn skills, and play until Book 1 is won:
+
+```powershell
+$env:UNTIL_LEVEL_COMPLETE="1"
+$env:LEVEL_TIMEOUT_SECONDS="600"
+npm run check:clients
+```
+
+Completion mode fails if the fleet is defeated or the level does not finish before the
+timeout, in addition to all the normal rendering and lockstep performance limits.
+
 ### Phones lock and tabs get backgrounded
 
 Mobile browsers kill `requestAnimationFrame` the instant you switch apps, which in naive
