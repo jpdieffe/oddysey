@@ -6,7 +6,7 @@
  * seeing different games. Run with `npm run check:sim`.
  */
 
-import { fxMul, fxDiv, fxSqrt, fx, FX_ONE } from '../core/fixed';
+import { fxMul, fxDiv, fxSqrt, fx, fxDist2, FX_ONE } from '../core/fixed';
 import { isBuildable, buildMapRuntime } from '../content/maps';
 import { ENEMY } from '../content/enemies';
 import { generateWave, unlockedBossEchoes } from '../content/waves';
@@ -288,6 +288,33 @@ export function runChecks(): Report {
   }
   if (heroWeaponsOk) lines.push('PASS  Odysseus fires five ranged arrow tiers while Ajax keeps melee slash attacks');
   else { ok = false; lines.push('FAIL  Odysseus ranged arrows or Ajax melee slash behavior regressed'); }
+
+  // Summoned helpers should follow on a visible flank, not occupy the exact
+  // hero position where their sprite is hidden. They must also catch up after
+  // the hero moves while remaining inside their combat leash.
+  {
+    const summon = heroSkills(0).find((skill) => skill.branch === 'Summon')!;
+    const state = createState({ ...makeConfig(0x1ea5, 0, 1), startLives: 20,
+      players: [{ name: 'Odysseus', heroId: 0, skills: [summon.id] }] });
+    const output: SimOutput = { events: [] };
+    const hero = state.players[0].hero;
+    step(state, [useAbility(0, summon.id, hero.x, hero.y)], output);
+    for (let tick = 0; tick < 20; tick++) step(state, [], output);
+    let helper = state.soldiers[0];
+    const firstDistance = helper ? fxDist2(helper.x, helper.y, hero.x, hero.y) : 0;
+    step(state, [moveHero(0, hero.x + fx(3), hero.y + fx(2))], output);
+    for (let tick = 0; tick < 120; tick++) step(state, [], output);
+    helper = state.soldiers[0];
+    const followDistance = helper ? fxDist2(helper.x, helper.y, hero.x, hero.y) : 0;
+    const minVisible = fxMul(fx(.55), fx(.55));
+    const maxLeash = fxMul(fx(1.7), fx(1.7));
+    if (helper && firstDistance >= minVisible && followDistance >= minVisible && followDistance <= maxLeash) {
+      lines.push('PASS  summoned helpers hold a visible flank and follow inside their hero leash');
+    } else {
+      ok = false;
+      lines.push('FAIL  summoned helper overlapped its hero or failed to follow inside the leash');
+    }
+  }
 
   const expectedBosses = [
     [ENEMY.Infernal, ENEMY.Minotaur],

@@ -47,6 +47,9 @@ const BLOCK_RANGE: Fx = fx(0.6);
 const MELEE_RANGE: Fx = fx(0.5);
 /** A squad never chases further than this from its rally post. */
 const LEASH: Fx = fx(1.7);
+/** Summoned helpers hold a visible flank instead of hiding under their hero. */
+const SUMMON_SIDE_OFFSET: Fx = fx(1.05);
+const SUMMON_TRAIL_OFFSET: Fx = fx(0.18);
 /** Where each squad member stands relative to the rally post. */
 const SQUAD_OFFSETS: readonly Vec2[] = [
   { x: -fx(0.3), y: fx(0.18) },
@@ -1143,7 +1146,19 @@ function updateTowers(ctx: Ctx): void {
     }
     if (t.invested <= -20) {
       const hero = s.players[t.owner]?.hero;
-      if (hero?.alive) { t.rx = hero.x; t.ry = hero.y; }
+      if (hero?.alive) {
+        // Stand mostly perpendicular to the hero's facing direction. A small
+        // trailing component makes the formation feel tethered without ever
+        // putting the helper directly beneath the hero sprite.
+        const side = (t.id & 1) === 0 ? 1 : -1;
+        const offX = fxMul(-hero.dy, SUMMON_SIDE_OFFSET) * side
+          - fxMul(hero.dx, SUMMON_TRAIL_OFFSET);
+        const offY = fxMul(hero.dx, SUMMON_SIDE_OFFSET) * side
+          - fxMul(hero.dy, SUMMON_TRAIL_OFFSET);
+        const edge = fx(0.35);
+        t.rx = Math.max(edge, Math.min(fx(ctx.rt.def.w) - edge, hero.x + offX));
+        t.ry = Math.max(edge, Math.min(fx(ctx.rt.def.h) - edge, hero.y + offY));
+      }
     }
     if (t.cd > 0) t.cd--;
 
@@ -1549,8 +1564,11 @@ function updateSoldier(ctx: Ctx, t: Tower, st: TowerStats, sd: Soldier): void {
   if (sd.attackCd > 0) sd.attackCd--;
 
   const off = SQUAD_OFFSETS[sd.slot % SQUAD_OFFSETS.length];
-  const postX = t.rx + off.x;
-  const postY = t.ry + off.y;
+  // Hero summons already have a dedicated flank anchor. Barracks squads keep
+  // their multi-unit formation offsets around the rally flag.
+  const summoned = t.invested <= -20;
+  const postX = t.rx + (summoned ? 0 : off.x);
+  const postY = t.ry + (summoned ? 0 : off.y);
   const speed = Math.max(1, st.unitSpeed);
 
   const target = soldierTarget(ctx, t, sd);
