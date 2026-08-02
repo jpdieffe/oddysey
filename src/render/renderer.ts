@@ -1044,11 +1044,6 @@ export class Renderer {
         ctx.ellipse(x, y + size * .18, size * (.34 + tier * .035), size * (.15 + tier * .012), 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
-        if (h.defId === HERO.Orc && swing > 0) {
-          const side = h.dx < 0 ? -1 : 1;
-          this.drawEmpoweredShot(x + side * size * .34, y - size * .08,
-            size * (.34 + tier * .055), side > 0 ? 0 : Math.PI, tier, h.defId);
-        }
       }
 
       // Health + level
@@ -1286,12 +1281,16 @@ export class Renderer {
       ctx.fillStyle=tier>=4?'#fff0a0':'#315b9a';for(const sy of [-1,1]){ctx.beginPath();ctx.moveTo(-len*.5,0);ctx.lineTo(-len*.3,sy*size*.16);ctx.lineTo(-len*.12,sy*size*.04);ctx.closePath();ctx.fill();}
       if(tier===5){ctx.strokeStyle=glow;ctx.lineWidth=size*.04;ctx.strokeRect(-len*.05,-size*.16,size*.16,size*.32);}
     } else if (heroId === HERO.Orc) {
-      // Ajax: no traveling projectile. These broad crescents appear only
-      // during his actual melee swing and grow into overlapping shockwaves.
-      size *= 3;
-      ctx.rotate(Math.PI/2);ctx.strokeStyle=glow;ctx.lineWidth=size*(.13+tier*.035);ctx.globalAlpha=.72;
-      for(let i=0;i<Math.ceil(tier/2);i++){ctx.beginPath();ctx.arc(-i*size*.08,0,size*(.38+i*.14),-Math.PI*.72,Math.PI*.72);ctx.stroke();}
-      ctx.globalAlpha=1;ctx.strokeStyle='#fff';ctx.lineWidth=size*.035;ctx.beginPath();ctx.arc(0,0,size*.42,-Math.PI*.72,Math.PI*.72);ctx.stroke();
+      // Ajax: a real fast-spinning thrown axe. Each tier adds a larger bronze
+      // head, hotter edge glow, and extra motion rings around the projectile.
+      ctx.rotate(this.time * .045 + tier * .7);
+      const reach = size * (.52 + tier * .035);
+      ctx.strokeStyle='#5a3320';ctx.lineWidth=size*.105;ctx.beginPath();ctx.moveTo(0,-reach);ctx.lineTo(0,reach);ctx.stroke();
+      const metal=ctx.createLinearGradient(-size*.4,0,size*.4,0);metal.addColorStop(0,'#5f351f');metal.addColorStop(.45,tier<3?'#d89436':glow);metal.addColorStop(1,'#fff2ae');
+      ctx.fillStyle=metal;ctx.strokeStyle='#261923';ctx.lineWidth=size*.035;
+      for(const sy of [-1,1]){ctx.beginPath();ctx.moveTo(0,sy*reach);ctx.bezierCurveTo(-size*.5,sy*size*.46,-size*.58,sy*size*.12,-size*.18,sy*size*.08);ctx.lineTo(size*.18,sy*size*.08);ctx.bezierCurveTo(size*.58,sy*size*.12,size*.5,sy*size*.46,0,sy*reach);ctx.closePath();ctx.fill();ctx.stroke();}
+      ctx.strokeStyle=glow;ctx.globalAlpha=.55;ctx.lineWidth=size*(.025+tier*.008);
+      for(let ring=0;ring<Math.ceil(tier/2);ring++){ctx.beginPath();ctx.arc(0,0,size*(.43+ring*.11),0,Math.PI*2);ctx.stroke();}
     } else {
       // Circe: layered transformation sigils and witch-fire bolts.
       ctx.strokeStyle=glow;ctx.lineWidth=size*.045;

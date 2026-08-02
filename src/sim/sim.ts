@@ -1991,10 +1991,10 @@ function updateHeroes(ctx: Ctx): void {
     if (h.attackCd > 0) { h.attackCd--; continue; }
     const buffTier = p.attackBuffKind > 0 ? ((p.attackBuffKind - 1) % 5) + 1 : 0;
     const buffHero = p.attackBuffKind > 0 ? Math.floor((p.attackBuffKind - 1) / 5) : -1;
-    // Odysseus's transformed attack is explicitly a bow stance. It needs
-    // ranged acquisition as well as a projectile, not an arrow graphic that
-    // only appears after an enemy has already entered spear range.
-    const attackRange = buffHero === 0 ? fx(3.6 + buffTier * 0.25) : d.range;
+    // Odysseus, Ajax, and Polyphemus swap from melee attacks into genuinely
+    // ranged weapons while their attack transformations are active.
+    const transformedRange = buffHero === 0 ? 3.6 : buffHero === 1 ? 3.35 : buffHero === 4 ? 3.25 : 0;
+    const attackRange = transformedRange > 0 ? fx(transformedRange + buffTier * 0.25) : d.range;
     const target = heroTarget(ctx, h, attackRange);
     if (!target) continue;
 
@@ -2042,10 +2042,12 @@ function heroAttackStats(d: ReturnType<typeof heroDef>, damage: number, buffKind
     ...BASE_STATS,
     damage,
     cooldown: d.attackCd,
-    range: buffHero === 0 ? fx(3.6 + buffTier * 0.25) : d.range,
+    range: buffHero === 0 ? fx(3.6 + buffTier * 0.25)
+      : buffHero === 1 ? fx(3.35 + buffTier * 0.25)
+        : buffHero === 4 ? fx(3.25 + buffTier * 0.25) : d.range,
     splash: d.splash,
     dmgType: buffHero === 2 ? DmgType.Fire : buffHero === 3 ? DmgType.Frost : d.dmgType,
-    projSpeed: buffHero === 0 ? fx(0.72) : d.projSpeed,
+    projSpeed: buffHero === 0 ? fx(0.72) : buffHero === 1 ? fx(0.82) : buffHero === 4 ? fx(0.66) : d.projSpeed,
     projKind: empoweredKind,
     pierce: buffTier > 0 ? buffTier - 1 : 0,
     slowPct: buffHero === 3 ? 22 + buffTier * 7 : 0,

@@ -62,8 +62,8 @@ const THEMES: readonly HeroTreeTheme[] = [
     heroId: HERO.Orc,
     passiveNames: ['Towering Stature', 'Sevenfold Hide', 'Bulwark of Achaea', 'Unbroken Wall', 'Might of Telamon'],
     summonNames: ['War Hound', 'Teucer Arrives', 'Shield-Brother', 'Salamian Phalanx', 'Telamonian Titan'],
-    attackNames: ['Heavy Kopis', 'Great Shield Bash', "Ajax's Rampage", 'Earthsplitter', 'Achaean Cataclysm'],
-    helper: 'an armored Salamian shield-brother', weapon: 'main attacks become colossal axe-like cleaves',
+    attackNames: ['Bronze Axe', 'Whirling Labrys', "Ajax's Returning Axe", 'Stormsplitter', 'Achaean Executioner'],
+    helper: 'an armored Salamian shield-brother', weapon: 'main attacks throw enormous, rapidly spinning axes',
     passiveIcon: '🛡', summonIcon: '⚔', attackIcon: '🪓', attackEffect: 'axeAttacks',
   },
   {
@@ -87,7 +87,7 @@ const THEMES: readonly HeroTreeTheme[] = [
     passiveNames: ['Cyclopean Strength', "Poseidon's Blood", 'Master Smith', 'Mountain-Born', 'World-Shaking Might'],
     summonNames: ['Cave Ram', 'Young Cyclops', 'Stone Giant', 'Armored Cyclops', 'Elder Titan'],
     attackNames: ['Boulder Grip', 'Volcanic Stone', "Polyphemus' Avalanche", 'Mountain Hurl', "Poseidon's Meteor"],
-    helper: 'a hulking creature from the Cyclops caves', weapon: 'main attacks become gigantic hurled boulders and axes',
+    helper: 'a hulking creature from the Cyclops caves', weapon: 'main attacks change from melee blows into gigantic hurled boulders',
     passiveIcon: '👁', summonIcon: '🐏', attackIcon: '🪨', attackEffect: 'axeAttacks',
   },
 ] as const;
