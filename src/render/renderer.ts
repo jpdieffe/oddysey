@@ -44,6 +44,8 @@ const CHARYBDIS_PART_Y = 135;
 const CHARYBDIS_PART_H = 500;
 const SCYLLA_SPRITES = new Image();
 SCYLLA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/scylla-strip.png`;
+const MYTHIC_BOSSES = new Image();
+MYTHIC_BOSSES.src = `${import.meta.env.BASE_URL}assets/odyssey/mythic-bosses-v2.png`;
 const SUMMON_WOLF_SPRITES = new Image();
 SUMMON_WOLF_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/summon-wolf-strip.png`;
 const SUMMON_GUARDIAN_SPRITES = new Image();
@@ -736,6 +738,8 @@ export class Renderer {
         this.drawCharybdis(e, x, y - lift + bob, size, spawnFade);
       } else if (e.defId === ENEMY.BoneDragon || e.defId === ENEMY.ScyllaSpawn) {
         this.drawScylla(e, x, y - lift + bob, size, spawnFade);
+      } else if (e.defId >= ENEMY.Cerberus && e.defId <= ENEMY.StoneBrute) {
+        this.drawMythicBoss(e, x, y - lift + bob, size, spawnFade);
       } else {
         atlas.drawTinted(ctx, d.art, x, y - lift + bob, size, rot, color, spawnFade);
       }
@@ -899,6 +903,33 @@ export class Renderer {
       SCYLLA_SPRITES,
       frame * sourceW, 0, sourceW, sourceH,
       -w / 2, -h / 2, w, h,
+    );
+    this.ctx.restore();
+  }
+
+  /** Six new mythic families share a rigorously aligned 3x2 foundation sheet. */
+  private drawMythicBoss(e: Enemy, x: number, y: number, size: number, alpha: number): void {
+    if (!MYTHIC_BOSSES.complete || MYTHIC_BOSSES.naturalWidth === 0) return;
+    const family = Math.floor((e.defId - ENEMY.Cerberus) / 2);
+    const col = family % 3;
+    const row = Math.floor(family / 3);
+    const sourceW = MYTHIC_BOSSES.naturalWidth / 3;
+    const sourceH = MYTHIC_BOSSES.naturalHeight / 2;
+    const attacking = e.blockedBy !== 0;
+    const beat = Math.floor((this.time + e.id * 59) / 130) % 4;
+    const squash = attacking && beat < 2 ? 1.08 : 1;
+    const familyScale = [1.34, 1.42, 1.5, 1.48, 1.42, 1.52][family] ?? 1.4;
+    const h = size * familyScale;
+    const w = h * (sourceW / sourceH) * squash;
+    const facesRight = e.dx > 0;
+    this.ctx.save();
+    this.ctx.globalAlpha *= alpha;
+    this.ctx.translate(x, y + size * 0.1);
+    this.ctx.scale(facesRight ? -1 : 1, 1);
+    this.ctx.drawImage(
+      MYTHIC_BOSSES,
+      col * sourceW, row * sourceH, sourceW, sourceH,
+      -w / 2, -h * 0.92, w, h,
     );
     this.ctx.restore();
   }

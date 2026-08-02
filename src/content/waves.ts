@@ -47,6 +47,9 @@ const BOOK_BOSSES: readonly (readonly [number, number])[] = [
   [ENEMY.Infernal, ENEMY.Minotaur],
   [ENEMY.CircesBeast, ENEMY.Hydra],
   [ENEMY.Charybdis, ENEMY.BoneDragon],
+  [ENEMY.Cerberus, ENEMY.Medusa],
+  [ENEMY.Talos, ENEMY.Typhon],
+  [ENEMY.SirenQueen, ENEMY.Hecatoncheires],
 ];
 
 const BOSS_ECHOES: Readonly<Record<number, PoolEntry>> = {
@@ -56,6 +59,12 @@ const BOSS_ECHOES: Readonly<Record<number, PoolEntry>> = {
   [ENEMY.Hydra]: { defId: ENEMY.HydraSpawn, cost: 48, minWave: 1, weight: 3, clump: 2 },
   [ENEMY.Charybdis]: { defId: ENEMY.CharybdisSpawn, cost: 50, minWave: 1, weight: 3, clump: 2 },
   [ENEMY.BoneDragon]: { defId: ENEMY.ScyllaSpawn, cost: 46, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.Cerberus]: { defId: ENEMY.Hellhound, cost: 52, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.Medusa]: { defId: ENEMY.Gorgon, cost: 56, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.Talos]: { defId: ENEMY.BronzeSentinel, cost: 62, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.Typhon]: { defId: ENEMY.TyphonSpawn, cost: 66, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.SirenQueen]: { defId: ENEMY.LesserSiren, cost: 58, minWave: 1, weight: 3, clump: 2 },
+  [ENEMY.Hecatoncheires]: { defId: ENEMY.StoneBrute, cost: 72, minWave: 1, weight: 2, clump: 1 },
 };
 
 /** Mythic monsters that have been defeated and may now appear as normal units. */

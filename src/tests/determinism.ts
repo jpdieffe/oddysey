@@ -320,11 +320,17 @@ export function runChecks(): Report {
     [ENEMY.Infernal, ENEMY.Minotaur],
     [ENEMY.CircesBeast, ENEMY.Hydra],
     [ENEMY.Charybdis, ENEMY.BoneDragon],
+    [ENEMY.Cerberus, ENEMY.Medusa],
+    [ENEMY.Talos, ENEMY.Typhon],
+    [ENEMY.SirenQueen, ENEMY.Hecatoncheires],
   ];
   const expectedEchoes = [
     [ENEMY.YoungCyclops, ENEMY.MinotaurWarrior],
     [ENEMY.EnchantedBoar, ENEMY.HydraSpawn],
     [ENEMY.CharybdisSpawn, ENEMY.ScyllaSpawn],
+    [ENEMY.Hellhound, ENEMY.Gorgon],
+    [ENEMY.BronzeSentinel, ENEMY.TyphonSpawn],
+    [ENEMY.LesserSiren, ENEMY.StoneBrute],
   ];
   for (let mapId = 0; mapId < expectedBosses.length; mapId++) {
     const first = generateWave(123, 5, 1, mapId).orders.find((o) => o.boss)?.defId;
@@ -334,7 +340,7 @@ export function runChecks(): Report {
     const inherited = unlockedBossEchoes(mapId + 1, 1);
     if (first !== expectedBosses[mapId][0] || second !== expectedBosses[mapId][1]
       || before.includes(expectedEchoes[mapId][0]) || !after.includes(expectedEchoes[mapId][0])
-      || (mapId < 2 && !inherited.includes(expectedEchoes[mapId][1]))) {
+      || (mapId < expectedBosses.length - 1 && !inherited.includes(expectedEchoes[mapId][1]))) {
       ok = false;
       lines.push(`FAIL  map ${mapId}: mythic boss or post-boss unlock progression is wrong`);
     }
@@ -356,7 +362,7 @@ export function runChecks(): Report {
     lines.push('PASS  Charybdis spawns as six independently killable linked pieces');
   }
 
-  for (const mapId of [0, 1, 2]) {
+  for (const mapId of [0, 1, 2, 3, 4, 5]) {
     const seed = 0x1234abcd ^ (mapId * 7919);
     const a = run(seed, mapId);
     const b = run(seed, mapId);

@@ -173,8 +173,8 @@ Scroll of Restoration, Sands of Time, Sentry Ward, Rune of Haste).
 
 Endless procedurally generated waves — ghouls, dire wolves, skeletons, armoured abominations,
 ward-bearing spirit wardens, healing shamans, bone golems, two kinds of flyer, summoning
-necromancers, and three rotating bosses. Waves roll modifiers (Hasted, Armoured, Shielded,
-Swarm, Regenerating) and every fifth wave is a boss. Three maps, three difficulties.
+necromancers, and twelve mythic bosses. Waves roll modifiers (Hasted, Armoured, Shielded,
+Swarm, Regenerating) and every fifth wave is a boss. Six campaign maps, three difficulties.
 
 **Co-op rules:** separate gold and separate tower ownership (so nobody spends your money),
 but a **shared pool of lives**. Every player must tap READY to call a wave early, which pays

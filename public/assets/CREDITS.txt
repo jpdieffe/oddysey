@@ -18,3 +18,14 @@ Summon sprites
 Released under Creative Commons CC0 1.0 Universal.
 
 The Calydonian Guardian summon strip was created specifically for Odyssey with OpenAI image generation.
+
+New mythic bosses
+=================
+
+The Cerberus, Medusa, Talos, Typhon, Siren Queen, and Hecatoncheires sprite
+foundations were created specifically for Odyssey with OpenAI image generation,
+informed by open-game sprite research and normalized into a fixed 3x2 sheet.
+
+"Glorious Victory Fanfare NES" by congusbongus
+https://opengameart.org/content/glorious-victory-fanfare-nes
+Released under Creative Commons CC0 1.0 Universal.

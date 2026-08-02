@@ -45,7 +45,7 @@ const SFX_FILES: Record<string, string> = {
 
 const MUSIC_FILES: Record<string, string> = {
   waveStart: 'music/jingles_nes07.ogg',
-  waveClear: 'music/jingles_nes00.ogg',
+  waveClear: 'music/victory-wave.ogg',
   levelUp: 'music/jingles_nes10.ogg',
   defeat: 'music/jingles_nes13.ogg',
   boss: 'music/jingles_nes16.ogg',
