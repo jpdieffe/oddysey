@@ -196,6 +196,9 @@ def main() -> None:
             print(f'PASS {output_name}: isolated frames, safe alpha margins, fixed foot line')
         validate(args.check_dir / 'scylla-strip.png')
         print('PASS scylla-strip.png: isolated frames, safe alpha margins, fixed foot line')
+        for summon_name in ['summon-wolf-strip.png', 'summon-calydonian-strip.png']:
+            validate(args.check_dir / summon_name)
+            print(f'PASS {summon_name}: isolated frames, safe alpha margins, fixed foot line')
         # Charybdis segments intentionally meet at their left/right edges to form one worm.
         validate_grid(args.check_dir / 'charybdis-parts.png', 3, 1, allow_horizontal_touch=True)
         print('PASS charybdis-parts.png: 3 isolated body parts with safe alpha margins')

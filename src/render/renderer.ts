@@ -44,6 +44,12 @@ const CHARYBDIS_PART_Y = 135;
 const CHARYBDIS_PART_H = 500;
 const SCYLLA_SPRITES = new Image();
 SCYLLA_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/scylla-strip.png`;
+const SUMMON_WOLF_SPRITES = new Image();
+SUMMON_WOLF_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/summon-wolf-strip.png`;
+const SUMMON_GUARDIAN_SPRITES = new Image();
+SUMMON_GUARDIAN_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/summon-calydonian-strip.png`;
+const SUMMON_WARRIOR_SPRITES = new Image();
+SUMMON_WARRIOR_SPRITES.src = `${import.meta.env.BASE_URL}assets/odyssey/ajax-strip.png`;
 
 export interface ViewOptions {
   localPlayer: number;
@@ -1124,6 +1130,43 @@ export class Renderer {
       ];
       const palette = palettes[defId] ?? palettes[0];
       size *= 1 + (tier - 1) * .12;
+      let sprite: HTMLImageElement | null = null;
+      let ground = 1;
+      let spriteScale = 1;
+      if (tier === 1 && defId !== HERO.DarkElf && defId !== HERO.Magician) {
+        sprite = SUMMON_WOLF_SPRITES; ground = 572 / 592; spriteScale = .94;
+      } else if (tier === 1) {
+        sprite = SUMMON_GUARDIAN_SPRITES; ground = 252 / 272; spriteScale = .88;
+      } else if (tier === 2 && (defId === HERO.Paladin || defId === HERO.Orc)) {
+        sprite = SUMMON_WARRIOR_SPRITES; ground = 326 / 352; spriteScale = 1.05;
+      } else if (tier === 2 && (defId === HERO.DarkElf || defId === HERO.HighElf)) {
+        sprite = SUMMON_WOLF_SPRITES; ground = 572 / 592; spriteScale = 1.08;
+      } else if (tier === 3 && (defId === HERO.Paladin || defId === HERO.Orc)) {
+        sprite = SUMMON_WARRIOR_SPRITES; ground = 326 / 352; spriteScale = 1.2;
+      } else if (tier === 3 && (defId === HERO.DarkElf || defId === HERO.HighElf)) {
+        sprite = SUMMON_GUARDIAN_SPRITES; ground = 252 / 272; spriteScale = 1.08;
+      } else if ((tier === 2 || tier === 3 || tier === 5) && defId === HERO.Magician) {
+        sprite = CYCLOPS_SPRITES; ground = CYCLOPS_GROUND; spriteScale = tier === 2 ? 1 : tier === 3 ? 1.18 : 1.42;
+      } else if (tier === 5 && defId === HERO.DarkElf) {
+        sprite = CHIMERA_SPRITES; ground = CHIMERA_GROUND; spriteScale = 1.34;
+      } else if (tier === 5 && defId === HERO.HighElf) {
+        sprite = SUMMON_GUARDIAN_SPRITES; ground = 252 / 272; spriteScale = 1.36;
+      } else if (tier === 5) {
+        sprite = SUMMON_WARRIOR_SPRITES; ground = 326 / 352; spriteScale = 1.42;
+      }
+      if (sprite?.complete && sprite.naturalWidth > 0) {
+        const sourceW = sprite.naturalWidth / 8;
+        const sourceH = sprite.naturalHeight;
+        const frame = Math.floor(anim / 5) % 5;
+        const h = size * spriteScale;
+        const w = h * sourceW / sourceH;
+        // Imported strips face left; cancel the legacy right-facing companion basis.
+        ctx.scale(-1, 1);
+        ctx.drawImage(sprite, frame * sourceW, 0, sourceW, sourceH, -w / 2, -h * ground, w, h);
+        ctx.strokeStyle = team; ctx.globalAlpha = .8; ctx.lineWidth = Math.max(1.5, size * .035);
+        ctx.beginPath(); ctx.ellipse(0, size * .04, size * .44, size * .16, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore(); return;
+      }
       ctx.strokeStyle='#201923'; ctx.lineWidth=Math.max(1.5,size*.045); ctx.lineJoin='round'; ctx.lineCap='round';
       ctx.fillStyle=palette[0];
       if (tier === 1) {
